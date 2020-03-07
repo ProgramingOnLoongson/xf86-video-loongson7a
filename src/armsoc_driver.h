@@ -43,11 +43,11 @@
 /* Apparently not used by X server */
 #define ARMSOC_VERSION		1000
 /* Name used to prefix messages */
-#define ARMSOC_NAME			"OMAP5"
+#define ARMSOC_NAME		"LOONGSON7A"
 /* Driver name as used in config file */
 #define ARMSOC_DRIVER_NAME	"omap5"
 
-#define ARMSOC_SUPPORT_GAMMA 0
+#define ARMSOC_SUPPORT_GAMMA	0
 
 /**
  * This controls whether debug statements (and function "trace" enter/exit)

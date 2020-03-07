@@ -97,7 +97,7 @@ _X_EXPORT DriverRec ARMSOC = {
 };
 
 /** Supported "chipsets." */
-#define ARMSOC_CHIPSET_NAME "OMAP"
+#define ARMSOC_CHIPSET_NAME "LOONGSON7A"
 
 /** Supported options, as enum values. */
 enum {
@@ -596,7 +596,8 @@ ARMSOCAvailableOptions(int chipid, int busid)
 static void
 ARMSOCIdentify(int flags)
 {
-	xf86Msg(X_INFO, "%s: Driver for ARM TI OMAP5 compatible chipsets\n", ARMSOC_NAME);
+	xf86Msg(X_INFO, "%s: Driver for LOONGSON7a1000 compatible chipsets\n", 
+			ARMSOC_NAME);
 }
 
 /**

@@ -1022,7 +1022,7 @@ ARMSOCDRI2ScreenInit(ScreenPtr pScreen)
 	DRI2InfoRec info = {
 		.version         = 6,
 		.fd              = pARMSOC->drmFD,
-		.driverName      = "armsoc",
+		.driverName      = "loongson-drm",
 		.deviceName      = pARMSOC->deviceName,
 		.CreateBuffer    = ARMSOCDRI2CreateBuffer,
 		.DestroyBuffer   = ARMSOCDRI2DestroyBuffer,
