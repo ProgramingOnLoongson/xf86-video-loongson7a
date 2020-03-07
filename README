@@ -20,7 +20,7 @@ EGL client APIs are: OpenGL_ES
 
 Install:
 ./autogen.sh
-./configure --prefix=/usr
+./configure --prefix=/usr --libdir=/usr/lib64
 make
 sudo make install
 
