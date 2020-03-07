@@ -44,9 +44,7 @@
 
 struct armsoc_device {
 	int fd;
-	int (*create_custom_gem)(int fd, struct armsoc_create_gem *create_gem);
 	Bool alpha_supported;
-
 };
 
 struct armsoc_bo {
@@ -72,16 +70,13 @@ struct armsoc_bo {
 /* device related functions:
  */
 
-struct armsoc_device *armsoc_device_new(int fd,
-                                        int (*create_custom_gem)(int fd,
-                                                struct armsoc_create_gem *create_gem))
+struct armsoc_device *armsoc_device_new(int fd)
 {
 	struct armsoc_device *new_dev = calloc(1, sizeof(*new_dev));
 	if (!new_dev)
 		return NULL;
 
 	new_dev->fd = fd;
-	new_dev->create_custom_gem = create_custom_gem;
 	new_dev->alpha_supported = TRUE;
 	return new_dev;
 }
@@ -203,21 +198,6 @@ struct armsoc_bo *armsoc_bo_new_with_dim(struct armsoc_device *dev,
 	if (!new_buf)
 		return NULL;
 
-	/*
-		create_gem.buf_type = buf_type;
-		create_gem.height = height;
-		create_gem.width = width;
-		create_gem.bpp = bpp;
-		res = dev->create_custom_gem(dev->fd, &create_gem);
-		if (res) {
-			free(new_buf);
-			xf86DrvMsg(-1, X_ERROR,
-			           "_CREATE_GEM({height: %d, width: %d, bpp: %d buf_type: 0x%X}) failed. errno: %d - %s\n",
-			           height, width, bpp, buf_type,
-			           errno, strerror(errno));
-			return NULL;
-		}
-		*/
 	struct drm_mode_create_dumb create_gem;
 	memset(&create_gem, 0, sizeof(create_gem));
 	create_gem.width = width;
@@ -509,8 +489,7 @@ int armsoc_bo_clear(struct armsoc_bo *bo)
 	return 0;
 }
 
-int armsoc_bo_resize(struct armsoc_bo *bo, uint32_t new_width,
-                     uint32_t new_height)
+int armsoc_bo_resize(struct armsoc_bo *bo, uint32_t new_width, uint32_t new_height)
 {
 	uint32_t new_size;
 	uint32_t new_pitch;

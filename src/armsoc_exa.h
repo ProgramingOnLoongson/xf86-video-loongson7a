@@ -34,9 +34,9 @@
  * to core driver..
  */
 #include "armsoc_dumb.h"
-#include "xf86.h"
-#include "xf86_OSproc.h"
-#include "exa.h"
+#include <xf86.h>
+#include <xf86_OSproc.h>
+#include <exa.h>
 #include "compat-api.h"
 
 struct ARMSOCEXABuf {
@@ -49,7 +49,7 @@ struct ARMSOCEXABuf {
 
 /**
  * A per-Screen structure used to communicate and coordinate between the
- * ARMSOC X driver and an external EXA sub-module (if loaded).
+ * Loongson7a X driver and an external EXA sub-module (if loaded).
  */
 struct ARMSOCEXARec {
 	/**
@@ -117,7 +117,7 @@ draw2pix(DrawablePtr pDraw)
 		return (PixmapPtr)pDraw;
 }
 
-/* Common ARMSOC EXA functions, mostly related to pixmap/buffer allocation.
+/* Common EXA functions, mostly related to pixmap/buffer allocation.
  * Individual driver submodules can use these directly, or wrap them with
  * there own functions if anything additional is required.  Submodules
  * can use ARMSOCPrixmapPrivPtr#priv for their own private data.

@@ -40,14 +40,11 @@
 #include <errno.h>
 #include "armsoc_exa.h"
 
-/* Apparently not used by X server */
-#define ARMSOC_VERSION		1000
-/* Name used to prefix messages */
-#define ARMSOC_NAME			"OMAP5"
-/* Driver name as used in config file */
-#define ARMSOC_DRIVER_NAME	"omap5"
 
-#define ARMSOC_SUPPORT_GAMMA 0
+/* Name used to prefix messages */
+#define ARMSOC_NAME		"LOONGSON7A"
+
+#define ARMSOC_SUPPORT_GAMMA	0
 
 /**
  * This controls whether debug statements (and function "trace" enter/exit)

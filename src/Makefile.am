@@ -21,6 +21,7 @@
 # Authors:
 #    Ian Elliott <ianelliottus@yahoo.com>
 #    Rob Clark <rob@ti.com>
+#    suijingfeng <suijingfeng@loongson.cn>
 
 # this is obnoxious:
 # -module lets us name the module exactly how we want
@@ -29,13 +30,9 @@
 # TODO: -nostdlib/-Bstatic/-lgcc platform magic, not installing the .a, etc.
 
 
-NEON_CFLAGS=-march=armv7-a -mfpu=neon -mfloat-abi=hard -Wa,-mfpu=neon
+LOONGSON_CFLAGS = -O2 -march=mips64r2 -mtune=loongson3a -mel -mabi=64
 
-NEON_CCASFLAGS=$(NEON_CFLAGS) -mthumb-interwork
-NEON_ASFLAGS=-k -mcpu=cortex-a15 $(NEON_CCASFLAGS)
-
-AM_ASFLAGS = $(NEON_ASFLAGS)
-AM_CCASFLAGS = $(NEON_CCASFLAGS)
+AM_ASFLAGS = $(LOONGSON_CFLAGS)
 
 # TODO: probably should have configure script check for what is supported..
 ERROR_CFLAGS = -Wall -Wdeclaration-after-statement -Wvla \
@@ -44,24 +41,22 @@ ERROR_CFLAGS = -Wall -Wdeclaration-after-statement -Wvla \
 	-Wold-style-definition -Winit-self -Wmissing-include-dirs \
 	-Waddress -Waggregate-return -Wno-multichar -Wnested-externs
  
-AM_CFLAGS = @XORG_CFLAGS@
-omap5_drv_la_LTLIBRARIES = omap5_drv.la
-omap5_drv_la_LDFLAGS = -module -avoid-version -no-undefined
-omap5_drv_la_LIBADD = @XORG_LIBS@
-omap5_drv_ladir = @moduledir@/drivers
-DRMMODE_SRCS = drmmode_omap/drmmode_omap.c
+AM_CFLAGS = @XORG_CFLAGS@ $(LOONGSON_CFLAGS)
+loongson7a_drv_la_LTLIBRARIES = loongson7a_drv.la
+loongson7a_drv_la_LDFLAGS = -module -avoid-version -no-undefined
+loongson7a_drv_la_LIBADD = @XORG_LIBS@
+loongson7a_drv_ladir = @moduledir@/drivers
 
-omap5_drv_la_SOURCES = \
-         drmmode_display.c \
-         armsoc_exa.c \
-         armsoc_exa_null.c \
-         armsoc_dri2.c \
-         armsoc_driver.c \
-         armsoc_dumb.c \
-         armsoc_dri3.c \
-         armsoc_present.c \
-         armsoc_xv.c \
-         viv2d/queue.c \
-         viv2d/etnaviv_extra.c \
-         viv2d/viv2d_exa.c \
-         $(DRMMODE_SRCS)
+loongson7a_drv_la_SOURCES = \
+	drmmode_display.c \
+	armsoc_exa.c \
+	armsoc_exa_null.c \
+	armsoc_dri2.c \
+	armsoc_driver.c \
+	armsoc_dumb.c \
+	armsoc_dri3.c \
+	armsoc_present.c \
+	armsoc_xv.c \
+	viv2d/queue.c \
+	viv2d/etnaviv_extra.c \
+	viv2d/viv2d_exa.c

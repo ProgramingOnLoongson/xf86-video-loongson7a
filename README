@@ -1,4 +1,4 @@
-X.org graphics driver for OMAP AM57x
+X.org graphics driver for loongson7A
 
 Features:
 - EXA and Xv GC320 2D acceleration with etnaviv
@@ -20,7 +20,7 @@ EGL client APIs are: OpenGL_ES
 
 Install:
 ./autogen.sh
-./configure --prefix=/usr
+./configure --prefix=/usr --libdir=/usr/lib64
 make
 sudo make install
 

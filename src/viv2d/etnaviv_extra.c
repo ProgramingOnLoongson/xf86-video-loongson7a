@@ -349,8 +349,7 @@ struct etna_bo *etna_bo_from_usermem_prot(struct etna_device *dev, void *memory,
 		.handle = 0
 	};
 
-	int err = drmCommandWriteRead(dev->fd, DRM_ETNAVIV_GEM_USERPTR, &req,
-	                              sizeof(req));
+	int err = drmCommandWriteRead(dev->fd, DRM_ETNAVIV_GEM_USERPTR, &req, sizeof(req));
 	if (err) {
 		INFO_MSG("etna_bo_from_usermem_prot fail: %d", err);
 		return NULL;

@@ -1,5 +1,8 @@
 /*
- * Copyright © 2013 ARM Limited.
+ * Copyright © 2020 Loongson Limited.
+ * 
+ * Authors:
+ *    suijingfeng@loognson.com
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -27,8 +30,8 @@
 
 #include <stdint.h>
 
-#include "xorg-server.h"
-#include "xf86Crtc.h"
+#include <xorg-server.h>
+#include <xf86Crtc.h>
 #include "armsoc_dumb.h"
 
 enum hwcursor_api {
@@ -46,8 +49,8 @@ struct drmmode_interface {
 	 */
 	int use_page_flip_events;
 
-	/* Boolean value indicating whether to support early display
-	 * feature. This allows the next back buffer to be obtained while
+	/* Boolean value indicating whether to support early display feature. 
+	 * This allows the next back buffer to be obtained while
 	 * the previous is being flipped.
 	 */
 	int use_early_display;
@@ -85,24 +88,10 @@ struct drmmode_interface {
 	 */
 	int (*init_plane_for_cursor)(int drm_fd, uint32_t plane_id);
 
-	/* Boolean value indicating whether the DRM supports
-	 * vblank timestamp query
+	/* Boolean value indicating whether the DRM supports vblank timestamp query
 	 */
 	int vblank_query_supported;
-
-	/* (Mandatory) Create new gem object
-	 *
-	 * A driver specific ioctl() is usually needed to create GEM objects
-	 * with particular features such as contiguous memory, uncached, etc...
-	 *
-	 * @param       fd             DRM device file descriptor
-	 * @param       create_gem     generic GEM description
-	 * @return 0 on success, non-zero on failure
-	 */
-	int (*create_custom_gem)(int fd, struct armsoc_create_gem *create_gem);
 };
-
-extern struct drmmode_interface omap_interface;
 
 
 #endif
