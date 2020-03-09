@@ -802,11 +802,10 @@ static struct drmmode_interface *get_drmmode_implementation(int drm_fd)
 
 
 /**
- * The driver's PreInit() function.  Additional hardware probing is allowed
- * now, including display configuration.
+ * The driver's PreInit() function.  
+ * Additional hardware probing is allowed now, including display configuration.
  */
-static Bool
-ARMSOCPreInit(ScrnInfoPtr pScrn, int flags)
+static Bool ARMSOCPreInit(ScrnInfoPtr pScrn, int flags)
 {
 	struct ARMSOCRec *pARMSOC;
 	int default_depth, fbbpp;

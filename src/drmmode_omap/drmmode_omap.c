@@ -26,7 +26,7 @@
 #include <stddef.h>
 #include <xf86drmMode.h>
 #include <xf86drm.h>
-#include <sys/ioctl.h>
+
 
 /* taken from libdrm */
 
@@ -64,41 +64,39 @@ struct drm_omap_gem_new {
 #define OMAP_BO_TILED		(OMAP_BO_TILED_8 | OMAP_BO_TILED_16 | OMAP_BO_TILED_32)
 
 /* Cursor dimensions
- * Technically we probably don't have any size limit.. since we
- * are just using an overlay... but xserver will always create
- * cursor images in the max size, so don't use width/height values
- * that are too big
+ * Technically we probably don't have any size limit, since we are just 
+ * using an overlay. But xserver will always create cursor images in the
+ * max size, so don't use width/height values that are too big
  */
-/* width */
+
 #define CURSORW   (64)
-/* height */
 #define CURSORH   (64)
 /* Padding added down each side of cursor image */
 #define CURSORPAD (0)
 
 #define ALIGN(val, align)	(((val) + (align) - 1) & ~((align) - 1))
 
-static int init_plane_for_cursor(int drm_fd, uint32_t plane_id) {
+static int init_plane_for_cursor(int drm_fd, uint32_t plane_id)
+{
 	int res = -1;
 	drmModeObjectPropertiesPtr props;
-	props = drmModeObjectGetProperties(drm_fd, plane_id,
-	                                   DRM_MODE_OBJECT_PLANE);
-
-	if (props) {
+	props = drmModeObjectGetProperties(drm_fd, plane_id, DRM_MODE_OBJECT_PLANE);
+	if (props)
+	{
 		int i;
 
-		for (i = 0; i < props->count_props; i++) {
+		for (i = 0; i < props->count_props; ++i)
+		{
 			drmModePropertyPtr this_prop;
 			this_prop = drmModeGetProperty(drm_fd, props->props[i]);
 
-			if (this_prop) {
-				if (!strncmp(this_prop->name, "zorder",
-				             DRM_PROP_NAME_LEN)) {
+			if (this_prop)
+			{
+				if (!strncmp(this_prop->name, "zorder", DRM_PROP_NAME_LEN))
+				{
 					res = drmModeObjectSetProperty(drm_fd,
-					                               plane_id,
-					                               DRM_MODE_OBJECT_PLANE,
-					                               this_prop->prop_id,
-					                               1);
+					          plane_id, DRM_MODE_OBJECT_PLANE,
+					          this_prop->prop_id, 1);
 					drmModeFreeProperty(this_prop);
 					break;
 				}
@@ -111,7 +109,7 @@ static int init_plane_for_cursor(int drm_fd, uint32_t plane_id) {
 	return res;
 }
 
-static int create_custom_gem(int fd, struct armsoc_create_gem *create_gem)
+static int create_custom_gem(int fd, struct armsoc_create_gem * pCreate_gem)
 {
 	int ret;
 	unsigned int pitch;
@@ -121,14 +119,15 @@ static int create_custom_gem(int fd, struct armsoc_create_gem *create_gem)
 	struct drm_omap_gem_new create_omap;
 
 	/* 32 bytes pitch for OMAP = 16 bytes pitch for gc320 */
-	pitch = ALIGN(create_gem->width * ((create_gem->bpp + 7) / 8), 32);
+	pitch = ALIGN(pCreate_gem->width * ((pCreate_gem->bpp + 7) / 8), 32);
 
-//	xf86Msg(X_INFO, "create_custom_gem: %d %d %d\n",create_gem->width,create_gem->bpp,pitch);
+	xf86Msg(X_INFO, "create_custom_gem: %d %d %d\n", 
+	        pCreate_gem->width, pCreate_gem->bpp, pitch);
 
-	if (create_gem->buf_type == ARMSOC_BO_SCANOUT)
+	if (pCreate_gem->buf_type == ARMSOC_BO_SCANOUT)
 		flags |= OMAP_BO_SCANOUT;
 
-	size = create_gem->height * pitch;
+	size = pCreate_gem->height * pitch;
 	gsize.bytes = size;
 	create_omap.size = gsize;
 	create_omap.flags = flags;
@@ -138,22 +137,28 @@ static int create_custom_gem(int fd, struct armsoc_create_gem *create_gem)
 		return ret;
 
 	/* Convert custom create_omap to generic create_gem */
-	create_gem->handle = create_omap.handle;
-	create_gem->pitch = pitch;
-	create_gem->size = create_omap.size.bytes;
+	pCreate_gem->handle = create_omap.handle;
+	pCreate_gem->pitch = pitch;
+	pCreate_gem->size = create_omap.size.bytes;
 
 	return 0;
 }
 
 struct drmmode_interface omap_interface = {
-	"loongson-drm"	      /* name of drm driver*/,
-	1                     /* use_page_flip_events */,
-	1                     /* use_early_display */,
-	CURSORW               /* cursor width */,
-	CURSORH               /* cursor_height */,
-	CURSORPAD             /* cursor padding */,
-	HWCURSOR_API_NONE 	  /* cursor_api */,
-	init_plane_for_cursor /* init_plane_for_cursor */,
-	0                     /* vblank_query_supported */,
-	create_custom_gem     /* create_custom_gem */,
+	/* Must match name used in the kernel driver */
+	.driver_name = "loongson-drm",
+	/* DRM page flip events should be requested and waited for 
+	 * during DRM_IOCTL_MODE_PAGE_FLIP. */
+	.use_page_flip_events = 1,
+	/* allows the next back buffer to be obtained while 
+	 * the previous is being flipped. */
+	.use_early_display = 1,
+	.cursor_width = CURSORW,
+	.cursor_height = CURSORH,
+	.cursor_padding = CURSORPAD,
+	/* No hardware cursor - use a software cursor */
+	.cursor_api = HWCURSOR_API_NONE,
+	.init_plane_for_cursor = init_plane_for_cursor,
+	.vblank_query_supported = 0,
+	.create_custom_gem = create_custom_gem,
 };

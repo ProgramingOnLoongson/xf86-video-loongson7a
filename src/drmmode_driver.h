@@ -46,8 +46,8 @@ struct drmmode_interface {
 	 */
 	int use_page_flip_events;
 
-	/* Boolean value indicating whether to support early display
-	 * feature. This allows the next back buffer to be obtained while
+	/* Boolean value indicating whether to support early display feature. 
+	 * This allows the next back buffer to be obtained while
 	 * the previous is being flipped.
 	 */
 	int use_early_display;
@@ -85,8 +85,7 @@ struct drmmode_interface {
 	 */
 	int (*init_plane_for_cursor)(int drm_fd, uint32_t plane_id);
 
-	/* Boolean value indicating whether the DRM supports
-	 * vblank timestamp query
+	/* Boolean value indicating whether the DRM supports vblank timestamp query
 	 */
 	int vblank_query_supported;
 
