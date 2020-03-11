@@ -1,29 +1,11 @@
 /* -*- mode: C; c-file-style: "k&r"; tab-width 4; indent-tabs-mode: t; -*- */
 
 /*
- * Copyright © 2011 Texas Instruments, Inc
- *
- * Permission is hereby granted, free of charge, to any person obtaining a
- * copy of this software and associated documentation files (the "Software"),
- * to deal in the Software without restriction, including without limitation
- * the rights to use, copy, modify, merge, publish, distribute, sublicense,
- * and/or sell copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice (including the next
- * paragraph) shall be included in all copies or substantial portions of the
- * Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
- * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
+ * Copyright: GPL
  *
  * Authors:
  *    Rob Clark <rob@ti.com>
+ *    suijingfeng@loognson.com
  */
 
 #ifdef HAVE_CONFIG_H
@@ -35,31 +17,34 @@
 
 #include "exa.h"
 
-/* This file has a trivial EXA implementation which accelerates nothing.  It
- * is used as the fall-back in case the EXA implementation for the current
- * chipset is not available.  (For example, on chipsets which used the closed
- * source IMG PowerVR EXA implementation, if the closed-source submodule is
- * not installed.
+/* This file has a trivial EXA implementation which accelerates nothing. 
+ * It is used as the fall-back in case the EXA implementation for the 
+ * current chipset is not available. For example, on chipsets which used
+ * the closed source IMG PowerVR/vivante EXA implementation, if the closed-source
+ * submodule is not installed.
  */
 
-#define NULL_DBG_MSG(fmt, ...)
-/*#define NULL_DBG_MSG(fmt, ...)		\
-		do { xf86Msg(X_INFO, fmt "\n",\
-				##__VA_ARGS__); } while (0)
-*/
+// #define NULL_DBG_MSG(fmt, ...)
+#define NULL_DBG_MSG(fmt, ...)		\
+	do { xf86Msg(X_INFO, fmt "\n", ##__VA_ARGS__); } while (0)
+
 struct ARMSOCNullEXARec {
 	struct ARMSOCEXARec base;
 	ExaDriverPtr exa;
 	/* add any other driver private data here.. */
 };
 
-static void AllocBuf(struct ARMSOCEXARec *exa, int width, int height, int depth, int bpp, int usage_hint, struct ARMSOCEXABuf *buf) {
-	int pitch = ((width * bpp + FB_MASK) >> FB_SHIFT) * sizeof(FbBits);
+static void AllocBuf( struct ARMSOCEXARec *exa, int width, int height, 
+		int depth, int bpp, int usage_hint, struct ARMSOCEXABuf * pBuf)
+{
+	unsigned int pitch = ((width * bpp + FB_MASK) >> FB_SHIFT) * sizeof(FbBits);
 	size_t size = pitch * height;
-	buf->buf = malloc(size);
-	buf->pitch = pitch;
-	buf->size = size;
-	NULL_DBG_MSG("AllocBuf buf:%p pitch:%d", buf->buf, pitch);
+	pBuf->buf = malloc(size);
+	pBuf->pitch = pitch;
+	pBuf->size = size;
+
+	xf86Msg(X_INFO, " AllocBuffer:%p, bpp=%d, FB_MASK=%d, FB_SHIFT=%d, sizeof FbBits=%d, pitch:%d\n",
+		       pBuf->buf, bpp, FB_MASK, FB_SHIFT, sizeof(FbBits), pitch);
 }
 
 static void FreeBuf(struct ARMSOCEXARec *exa, struct ARMSOCEXABuf *buf) {
@@ -131,8 +116,7 @@ FreeScreen(FREE_SCREEN_ARGS_DECL)
 {
 }
 
-struct ARMSOCEXARec *
-InitNullEXA(ScreenPtr pScreen, ScrnInfoPtr pScrn, int fd)
+struct ARMSOCEXARec * InitNullEXA(ScreenPtr pScreen, ScrnInfoPtr pScrn, int fd)
 {
 	struct ARMSOCNullEXARec *null_exa;
 	struct ARMSOCEXARec *armsoc_exa;
