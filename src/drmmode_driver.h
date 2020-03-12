@@ -27,8 +27,8 @@
 
 #include <stdint.h>
 
-#include "xorg-server.h"
-#include "xf86Crtc.h"
+#include <xorg-server.h>
+#include <xf86Crtc.h>
 #include "armsoc_dumb.h"
 
 enum hwcursor_api {
@@ -88,20 +88,7 @@ struct drmmode_interface {
 	/* Boolean value indicating whether the DRM supports vblank timestamp query
 	 */
 	int vblank_query_supported;
-
-	/* (Mandatory) Create new gem object
-	 *
-	 * A driver specific ioctl() is usually needed to create GEM objects
-	 * with particular features such as contiguous memory, uncached, etc...
-	 *
-	 * @param       fd             DRM device file descriptor
-	 * @param       create_gem     generic GEM description
-	 * @return 0 on success, non-zero on failure
-	 */
-	int (*create_custom_gem)(int fd, struct armsoc_create_gem *create_gem);
 };
-
-extern struct drmmode_interface omap_interface;
 
 
 #endif

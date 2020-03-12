@@ -15,7 +15,7 @@
 #include "armsoc_driver.h"
 #include "armsoc_exa.h"
 
-#include "exa.h"
+#include <exa.h>
 
 /* This file has a trivial EXA implementation which accelerates nothing. 
  * It is used as the fall-back in case the EXA implementation for the 
@@ -43,47 +43,44 @@ static void AllocBuf( struct ARMSOCEXARec *exa, int width, int height,
 	pBuf->pitch = pitch;
 	pBuf->size = size;
 
-	xf86Msg(X_INFO, " AllocBuffer:%p, bpp=%d, FB_MASK=%d, FB_SHIFT=%d, sizeof FbBits=%d, pitch:%d\n",
-		       pBuf->buf, bpp, FB_MASK, FB_SHIFT, sizeof(FbBits), pitch);
+	xf86Msg(X_INFO, " AllocBuffer:%p, pitch:%d\n", pBuf->buf, pitch);
 }
 
-static void FreeBuf(struct ARMSOCEXARec *exa, struct ARMSOCEXABuf *buf) {
-	NULL_DBG_MSG("FreeBuf buf:%p", buf->buf);
-	free(buf->buf);
-	buf->buf = NULL;
-	buf->pitch = 0;
-	buf->size = 0;
+static void FreeBuf(struct ARMSOCEXARec *exa, struct ARMSOCEXABuf * pBuf)
+{
+	NULL_DBG_MSG("FreeBuf buf:%p", pBuf->buf);
+	free( pBuf->buf );
+	pBuf->buf = NULL;
+	pBuf->pitch = 0;
+	pBuf->size = 0;
 }
 
-static void Reattach(PixmapPtr pPixmap, int width, int height, int pitch) {
+static void Reattach(PixmapPtr pPixmap, int width, int height, int pitch)
+{
 	NULL_DBG_MSG("Reattach pixmap:%p", pPixmap);
 }
 
 
-static Bool
-PrepareSolidFail(PixmapPtr pPixmap, int alu, Pixel planemask, Pixel fill_colour)
+static Bool PrepareSolidFail(PixmapPtr pPixmap, int alu, Pixel planemask, 
+		Pixel fill_colour)
 {
 	return FALSE;
 }
 
-static Bool
-PrepareCopyFail(PixmapPtr pSrc, PixmapPtr pDst, int xdir, int ydir,
+static Bool PrepareCopyFail(PixmapPtr pSrc, PixmapPtr pDst, int xdir, int ydir,
                 int alu, Pixel planemask)
 {
 	return FALSE;
 }
 
-static Bool
-CheckCompositeFail(int op, PicturePtr pSrcPicture, PicturePtr pMaskPicture,
+static Bool CheckCompositeFail(int op, PicturePtr pSrcPicture, PicturePtr pMaskPicture,
                    PicturePtr pDstPicture)
 {
 	return FALSE;
 }
 
-static Bool
-PrepareCompositeFail(int op, PicturePtr pSrcPicture, PicturePtr pMaskPicture,
-                     PicturePtr pDstPicture, PixmapPtr pSrc,
-                     PixmapPtr pMask, PixmapPtr pDst)
+static Bool PrepareCompositeFail(int op, PicturePtr pSrcPicture, PicturePtr pMaskPicture,
+               PicturePtr pDstPicture, PixmapPtr pSrc, PixmapPtr pMask, PixmapPtr pDst)
 {
 	return FALSE;
 }
@@ -92,8 +89,7 @@ PrepareCompositeFail(int op, PicturePtr pSrcPicture, PicturePtr pMaskPicture,
  * CloseScreen() is called at the end of each server generation and
  * cleans up everything initialised in InitNullEXA()
  */
-static Bool
-CloseScreen(CLOSE_SCREEN_ARGS_DECL)
+static Bool CloseScreen(CLOSE_SCREEN_ARGS_DECL)
 {
 	ScrnInfoPtr pScrn = xf86ScreenToScrn(pScreen);
 	struct ARMSOCRec *pARMSOC = ARMSOCPTR(pScrn);
@@ -111,24 +107,22 @@ CloseScreen(CLOSE_SCREEN_ARGS_DECL)
  * (which currently is nothing)
  *
  */
-static void
-FreeScreen(FREE_SCREEN_ARGS_DECL)
+static void FreeScreen(FREE_SCREEN_ARGS_DECL)
 {
 }
 
 struct ARMSOCEXARec * InitNullEXA(ScreenPtr pScreen, ScrnInfoPtr pScrn, int fd)
 {
 	struct ARMSOCNullEXARec *null_exa;
-	struct ARMSOCEXARec *armsoc_exa;
+
 	ExaDriverPtr exa;
 
-	INFO_MSG("Soft EXA mode");
+	xf86DrvMsg(pScrn->scrnIndex, X_INFO, "Soft EXA mode enable \n");
 
 	null_exa = calloc(1, sizeof(*null_exa));
 	if (!null_exa)
 		goto out;
 
-	armsoc_exa = (struct ARMSOCEXARec *)null_exa;
 
 	exa = exaDriverAlloc();
 	if (!exa)
@@ -167,6 +161,7 @@ struct ARMSOCEXARec * InitNullEXA(ScreenPtr pScreen, ScrnInfoPtr pScrn, int fd)
 		goto free_exa;
 	}
 
+	struct ARMSOCEXARec *armsoc_exa = &null_exa->base;
 	armsoc_exa->Reattach = Reattach;
 	armsoc_exa->AllocBuf = AllocBuf;
 	armsoc_exa->FreeBuf = FreeBuf;

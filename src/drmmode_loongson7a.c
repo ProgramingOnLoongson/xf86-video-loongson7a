@@ -22,11 +22,10 @@
  *
  */
 
-#include "../drmmode_driver.h"
+#include "drmmode_driver.h"
 #include <stddef.h>
 #include <xf86drmMode.h>
 #include <xf86drm.h>
-
 
 /* taken from libdrm */
 
@@ -76,7 +75,7 @@ struct drm_omap_gem_new {
 
 #define ALIGN(val, align)	(((val) + (align) - 1) & ~((align) - 1))
 
-static int init_plane_for_cursor(int drm_fd, uint32_t plane_id)
+static int LS7A_InitPlaneForCursor(int drm_fd, uint32_t plane_id)
 {
 	int res = -1;
 	drmModeObjectPropertiesPtr props;
@@ -109,7 +108,7 @@ static int init_plane_for_cursor(int drm_fd, uint32_t plane_id)
 	return res;
 }
 
-static int create_custom_gem(int fd, struct armsoc_create_gem * pCreate_gem)
+static int LS7A_CreateCustomGEM(int fd, struct armsoc_create_gem * pCreate_gem)
 {
 	int ret;
 	unsigned int pitch;
@@ -121,7 +120,7 @@ static int create_custom_gem(int fd, struct armsoc_create_gem * pCreate_gem)
 	/* 32 bytes pitch for OMAP = 16 bytes pitch for gc320 */
 	pitch = ALIGN(pCreate_gem->width * ((pCreate_gem->bpp + 7) / 8), 32);
 
-	xf86Msg(X_INFO, "create_custom_gem: %d %d %d\n", 
+	xf86Msg(X_INFO, "LS7A_CreateCustomGEM: %d %d %d\n", 
 	        pCreate_gem->width, pCreate_gem->bpp, pitch);
 
 	if (pCreate_gem->buf_type == ARMSOC_BO_SCANOUT)
@@ -144,7 +143,8 @@ static int create_custom_gem(int fd, struct armsoc_create_gem * pCreate_gem)
 	return 0;
 }
 
-struct drmmode_interface omap_interface = {
+
+struct drmmode_interface loongson7a_interface = {
 	/* Must match name used in the kernel driver */
 	.driver_name = "loongson-drm",
 	/* DRM page flip events should be requested and waited for 
@@ -158,7 +158,6 @@ struct drmmode_interface omap_interface = {
 	.cursor_padding = CURSORPAD,
 	/* No hardware cursor - use a software cursor */
 	.cursor_api = HWCURSOR_API_NONE,
-	.init_plane_for_cursor = init_plane_for_cursor,
+	.init_plane_for_cursor = LS7A_InitPlaneForCursor,
 	.vblank_query_supported = 0,
-	.create_custom_gem = create_custom_gem,
 };

@@ -124,8 +124,11 @@ static const OptionInfoRec ARMSOCOptions[] = {
 	{ -1,                NULL,         OPTV_NONE,    {0}, FALSE }
 };
 
+extern struct drmmode_interface loongson7a_interface;
+
+
 static struct drmmode_interface *interfaces[] = {
-	&omap_interface
+	&loongson7a_interface
 };
 
 /**
@@ -173,8 +176,8 @@ ARMSOCDropDRMMaster(void)
 	return ret;
 }
 
-static void
-ARMSOCShowDriverInfo(int fd)
+
+static void ARMSOCShowDriverInfo(int fd)
 {
 	char *bus_id;
 	drmVersionPtr version;
@@ -208,11 +211,11 @@ int ARMSOCDetectDevice(const char *name)
 {
 	drmVersionPtr version;
 	char buf[64];
-	int minor, fd, rc;
-
-	for (minor = 0; minor < 64; minor++) {
-		snprintf(buf, sizeof(buf), "%s/card%d", DRM_DIR_NAME,
-		         minor);
+	int fd, rc;
+	unsigned int minor;
+	for (minor = 0; minor < 64; ++minor)
+	{
+		snprintf(buf, sizeof(buf), "%s/card%d", DRM_DIR_NAME, minor);
 
 		fd = open(buf, O_RDWR);
 		if (fd == -1)
@@ -224,7 +227,7 @@ int ARMSOCDetectDevice(const char *name)
 			drmFreeVersion(version);
 
 			if (rc == 0) {
-				EARLY_INFO_MSG("ARMSOCDetectDevice %s found at %s", name, buf);
+				EARLY_INFO_MSG(" %s found at %s", name, buf);
 				return fd;
 			}
 		}
@@ -234,8 +237,7 @@ int ARMSOCDetectDevice(const char *name)
 	return -1;
 }
 
-static int
-ARMSOCOpenDRMCard(void)
+static int ARMSOCOpenDRMCard(void)
 {
 	int fd;
 
@@ -249,22 +251,27 @@ ARMSOCOpenDRMCard(void)
 		fd = drmOpen(connection.driver_name, connection.bus_id);
 		if (fd < 0)
 			goto fail2;
-	} else {
+	}
+	else
+	{
 		char filename[32];
 		int err;
 		int card_num = -1;
 		drmSetVersion sv;
 		char *bus_id, *bus_id_copy;
 
-		if (connection.card_num) {
-			snprintf(filename, sizeof(filename),
-			         DRM_DEVICE, card_num);
+		if (connection.card_num)
+		{
+			snprintf(filename, sizeof(filename), DRM_DEVICE, card_num);
 			EARLY_INFO_MSG(
-			    "No BusID or DriverName specified - opening %s",
-			    filename);
+			    "No BusID or DriverName specified - opening %s", filename);
 			fd = open(filename, O_RDWR, 0);
-		} else {
-			for (int i = 0; i < ARRAY_SIZE(interfaces); i++) {
+		}
+		else
+		{
+			unsigned int i;
+			for (int i = 0; i < ARRAY_SIZE(interfaces); i++)
+			{
 				struct drmmode_interface *iface = interfaces[i];
 				fd = ARMSOCDetectDevice(iface->driver_name);
 				if (fd != -1) {
@@ -329,8 +336,7 @@ fail2:
 	return -1;
 }
 
-static Bool
-ARMSOCOpenDRM(ScrnInfoPtr pScrn)
+static Bool ARMSOCOpenDRM(ScrnInfoPtr pScrn)
 {
 	struct ARMSOCRec *pARMSOC = ARMSOCPTR(pScrn);
 	drmSetVersion sv;
@@ -375,8 +381,7 @@ ARMSOCOpenDRM(ScrnInfoPtr pScrn)
 /**
  * Helper function for closing a connection to the DRM.
  */
-static void
-ARMSOCCloseDRM(ScrnInfoPtr pScrn)
+static void ARMSOCCloseDRM(ScrnInfoPtr pScrn)
 {
 	struct ARMSOCRec *pARMSOC = ARMSOCPTR(pScrn);
 
@@ -775,20 +780,20 @@ out:
 }
 
 /**
- * Find a drmmode driver with the same name as the underlying
- * drm kernel driver
+ * Find a drmmode driver with the same name as the underlying drm kernel driver
 */
 static struct drmmode_interface *get_drmmode_implementation(int drm_fd)
 {
 	drmVersionPtr version;
 	struct drmmode_interface *ret = NULL;
-	int i;
+	unsigned int i;
 
 	version = drmGetVersion(drm_fd);
 	if (!version)
 		return NULL;
 
-	for (i = 0; i < ARRAY_SIZE(interfaces); i++) {
+	for (i = 0; i < ARRAY_SIZE(interfaces); ++i)
+	{
 		struct drmmode_interface *iface = interfaces[i];
 		if (strcmp(version->name, iface->driver_name) == 0) {
 			ret = iface;
@@ -887,14 +892,12 @@ static Bool ARMSOCPreInit(ScrnInfoPtr pScrn, int flags)
 	if (!ARMSOCOpenDRM(pScrn))
 		goto fail;
 
-	pARMSOC->drmmode_interface =
-	    get_drmmode_implementation(pARMSOC->drmFD);
+	pARMSOC->drmmode_interface = get_drmmode_implementation(pARMSOC->drmFD);
 	if (!pARMSOC->drmmode_interface)
 		goto fail2;
 
 	/* create DRM device instance: */
-	pARMSOC->dev = armsoc_device_new(pARMSOC->drmFD,
-	                                 pARMSOC->drmmode_interface->create_custom_gem);
+	pARMSOC->dev = armsoc_device_new(pARMSOC->drmFD);
 
 	/* set chipset name: */
 	pScrn->chipset = (char *)ARMSOC_CHIPSET_NAME;
@@ -1004,8 +1007,7 @@ fail:
 /**
  * Initialize EXA and DRI2
  */
-static void
-ARMSOCAccelInit(ScreenPtr pScreen)
+static void ARMSOCAccelInit(ScreenPtr pScreen)
 {
 	ScrnInfoPtr pScrn = xf86ScreenToScrn(pScreen);
 	struct ARMSOCRec *pARMSOC = ARMSOCPTR(pScrn);
@@ -1035,8 +1037,7 @@ ARMSOCAccelInit(ScreenPtr pScreen)
  * generation. Fill in pScreen, map the frame buffer, save state,
  * initialize the mode, etc.
  */
-static Bool
-ARMSOCScreenInit(SCREEN_INIT_ARGS_DECL)
+static Bool ARMSOCScreenInit(SCREEN_INIT_ARGS_DECL)
 {
 	ScrnInfoPtr pScrn = xf86ScreenToScrn(pScreen);
 #ifndef XF86_SCRN_INTERFACE

@@ -36,7 +36,7 @@
 #include "armsoc_dumb.h"
 #include "xf86.h"
 #include "xf86_OSproc.h"
-#include "exa.h"
+#include <exa.h>
 #include "compat-api.h"
 
 struct ARMSOCEXABuf {

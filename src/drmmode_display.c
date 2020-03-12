@@ -48,9 +48,9 @@
 
 #include "armsoc_driver.h"
 
-#include "xf86drmMode.h"
-#include "drm_fourcc.h"
-#include "X11/Xatom.h"
+#include <xf86drmMode.h>
+#include <drm_fourcc.h>
+#include <X11/Xatom.h>
 
 #include <libudev.h>
 #include "drmmode_driver.h"
@@ -60,8 +60,7 @@ static void drmmode_output_dpms(xf86OutputPtr output, int mode);
 static Bool resize_scanout_bo(ScrnInfoPtr pScrn, int width, int height);
 static Bool drmmode_set_mode_major(xf86CrtcPtr crtc, DisplayModePtr mode, Rotation rotation, int x, int y);
 
-static struct drmmode_rec *
-drmmode_from_scrn(ScrnInfoPtr pScrn)
+static struct drmmode_rec * drmmode_from_scrn(ScrnInfoPtr pScrn)
 {
 	xf86CrtcConfigPtr xf86_config = XF86_CRTC_CONFIG_PTR(pScrn);
 	struct drmmode_crtc_private_rec *drmmode_crtc;
@@ -824,8 +823,7 @@ static const xf86CrtcFuncsRec drmmode_crtc_funcs = {
 };
 
 
-static uint32_t
-drmmode_crtc_vblank_pipe(int crtc_id)
+static uint32_t drmmode_crtc_vblank_pipe(int crtc_id)
 {
     if (crtc_id > 1)
         return crtc_id << DRM_VBLANK_HIGH_CRTC_SHIFT;
@@ -835,8 +833,7 @@ drmmode_crtc_vblank_pipe(int crtc_id)
         return 0;
 }
 
-static void
-drmmode_crtc_init(ScrnInfoPtr pScrn, struct drmmode_rec *drmmode, int num)
+static void drmmode_crtc_init(ScrnInfoPtr pScrn, struct drmmode_rec *drmmode, int num)
 {
 	xf86CrtcPtr crtc;
 	struct drmmode_crtc_private_rec *drmmode_crtc;
@@ -861,8 +858,7 @@ drmmode_crtc_init(ScrnInfoPtr pScrn, struct drmmode_rec *drmmode, int num)
 	return;
 }
 
-static xf86OutputStatus
-drmmode_output_detect(xf86OutputPtr output)
+static xf86OutputStatus drmmode_output_detect(xf86OutputPtr output)
 {
 	/* go to the hw and retrieve a new output struct */
 	struct drmmode_output_priv *drmmode_output = output->driver_private;
@@ -889,8 +885,7 @@ drmmode_output_detect(xf86OutputPtr output)
 	return status;
 }
 
-static Bool
-drmmode_output_mode_valid(xf86OutputPtr output, DisplayModePtr mode)
+static Bool drmmode_output_mode_valid(xf86OutputPtr output, DisplayModePtr mode)
 {
 	if (mode->type & M_T_DEFAULT)
 		/* Default modes are harmful here. */
@@ -899,8 +894,7 @@ drmmode_output_mode_valid(xf86OutputPtr output, DisplayModePtr mode)
 	return MODE_OK;
 }
 
-static DisplayModePtr
-drmmode_output_get_modes(xf86OutputPtr output)
+static DisplayModePtr drmmode_output_get_modes(xf86OutputPtr output)
 {
 	ScrnInfoPtr pScrn = output->scrn;
 	struct drmmode_output_priv *drmmode_output = output->driver_private;
@@ -952,8 +946,7 @@ drmmode_output_get_modes(xf86OutputPtr output)
 	return modes;
 }
 
-static void
-drmmode_output_destroy(xf86OutputPtr output)
+static void drmmode_output_destroy(xf86OutputPtr output)
 {
 	struct drmmode_output_priv *drmmode_output = output->driver_private;
 	int i;
@@ -977,8 +970,7 @@ drmmode_output_destroy(xf86OutputPtr output)
 	output->driver_private = NULL;
 }
 
-static void
-drmmode_output_dpms(xf86OutputPtr output, int mode)
+static void drmmode_output_dpms(xf86OutputPtr output, int mode)
 {
 	struct drmmode_output_priv *drmmode_output = output->driver_private;
 	drmModeConnectorPtr connector = drmmode_output->connector;
@@ -1006,8 +998,7 @@ drmmode_output_dpms(xf86OutputPtr output, int mode)
 			mode_id, mode);
 }
 
-static Bool
-drmmode_property_ignore(drmModePropertyPtr prop)
+static Bool drmmode_property_ignore(drmModePropertyPtr prop)
 {
 	if (!prop)
 		return TRUE;
@@ -1022,8 +1013,7 @@ drmmode_property_ignore(drmModePropertyPtr prop)
 	return FALSE;
 }
 
-static void
-drmmode_output_create_resources(xf86OutputPtr output)
+static void drmmode_output_create_resources(xf86OutputPtr output)
 {
 	struct drmmode_output_priv *drmmode_output = output->driver_private;
 	drmModeConnectorPtr connector = drmmode_output->connector;

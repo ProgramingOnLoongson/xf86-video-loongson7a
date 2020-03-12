@@ -44,13 +44,13 @@ static Bool ARMSOCDRI3Authorise(struct ARMSOCRec *pARMSOC, int fd)
 
 	ret = drmGetMagic(fd, &magic);
 	if (ret) {
-		EARLY_ERROR_MSG("ARMSOCDRI3Open cannot get magic : %d", ret);
+		EARLY_ERROR_MSG("cannot get magic : %d", ret);
 		return FALSE;
 	}
 
 	ret = drmAuthMagic(pARMSOC->drmFD, magic);
 	if (ret) {
-		EARLY_ERROR_MSG("ARMSOCDRI3Open cannot auth magic : %d", ret);
+		EARLY_ERROR_MSG("cannot auth magic : %d", ret);
 		return FALSE;
 	}
 
@@ -65,14 +65,14 @@ static int ARMSOCDRI3Open(ScreenPtr pScreen, RRProviderPtr provider, int *o)
 //	int fd = drmOpen(pARMSOC->deviceName, NULL);
 	int fd = open(pARMSOC->deviceName, O_RDWR | O_CLOEXEC);
 	if (fd < 0) {
-		ERROR_MSG("ARMSOCDRI3Open cannot open %s", pARMSOC->deviceName);
+		ERROR_MSG(" cannot open %s", pARMSOC->deviceName);
 		return BadAlloc;
 	} else {
-		INFO_MSG("ARMSOCDRI3Open %s opened in %d",  pARMSOC->deviceName, fd);
+		INFO_MSG(" %s opened in %d",  pARMSOC->deviceName, fd);
 	}
 
 	if (!ARMSOCDRI3Authorise(pARMSOC, fd)) {
-		ERROR_MSG("ARMSOCDRI3Open cannot authorize %s : %d", pARMSOC->deviceName, fd);
+		ERROR_MSG(" cannot authorize %s : %d", pARMSOC->deviceName, fd);
 		close(fd);
 		return BadMatch;
 	}
@@ -93,7 +93,7 @@ static PixmapPtr ARMSOCDRI3PixmapFromFD(ScreenPtr pScreen, int fd,
 
 	pixmap = pScreen->CreatePixmap(pScreen, width, height, depth, CREATE_PIXMAP_USAGE_BACKING_PIXMAP);
 	if (pixmap == NullPixmap) {
-		ERROR_MSG("ARMSOCDRI3Open cannot create pixmap");
+		ERROR_MSG("cannot create pixmap");
 		return pixmap;
 	}
 
@@ -102,7 +102,7 @@ static PixmapPtr ARMSOCDRI3PixmapFromFD(ScreenPtr pScreen, int fd,
 	priv = exaGetPixmapDriverPrivate(pixmap);
 
 	if (!priv || !priv->bo) {
-		ERROR_MSG("ARMSOCDRI3Open no privPix");
+		ERROR_MSG("no privPix");
 		pScreen->DestroyPixmap(pixmap);
 		return NullPixmap;
 	}
@@ -157,7 +157,7 @@ Bool ARMSOCDRI3ScreenInit(ScreenPtr pScreen)
 	if (!miSyncShmScreenInit(pScreen))
 		return FALSE;
 
-	INFO_MSG("ARMSOC DRI3 init");
+	xf86DrvMsg(pScrn->scrnIndex, X_INFO, "Loongson DRI3 init. \n"); 
 
 	return dri3_screen_init(pScreen, &armsoc_dri3_info);
 }
