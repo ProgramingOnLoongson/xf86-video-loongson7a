@@ -44,23 +44,6 @@ struct drm_omap_gem_new {
 	uint32_t __pad;
 };
 
-#define DRM_OMAP_GEM_NEW		0x03
-#define DRM_IOCTL_OMAP_GEM_NEW		DRM_IOWR(DRM_COMMAND_BASE + DRM_OMAP_GEM_NEW, struct drm_omap_gem_new)
-
-#define OMAP_BO_SCANOUT		0x00000001	/* scanout capable (phys contiguous) */
-#define OMAP_BO_CACHE_MASK	0x00000006	/* cache type mask, see cache modes */
-#define OMAP_BO_TILED_MASK	0x00000f00	/* tiled mapping mask, see tiled modes */
-
-/* cache modes */
-#define OMAP_BO_CACHED		0x00000000	/* default */
-#define OMAP_BO_WC		0x00000002	/* write-combine */
-#define OMAP_BO_UNCACHED	0x00000004	/* strongly-ordered (uncached) */
-
-/* tiled modes */
-#define OMAP_BO_TILED_8		0x00000100
-#define OMAP_BO_TILED_16	0x00000200
-#define OMAP_BO_TILED_32	0x00000300
-#define OMAP_BO_TILED		(OMAP_BO_TILED_8 | OMAP_BO_TILED_16 | OMAP_BO_TILED_32)
 
 /* Cursor dimensions
  * Technically we probably don't have any size limit, since we are just 
@@ -73,7 +56,6 @@ struct drm_omap_gem_new {
 /* Padding added down each side of cursor image */
 #define CURSORPAD (0)
 
-#define ALIGN(val, align)	(((val) + (align) - 1) & ~((align) - 1))
 
 static int LS7A_InitPlaneForCursor(int drm_fd, uint32_t plane_id)
 {
@@ -106,41 +88,6 @@ static int LS7A_InitPlaneForCursor(int drm_fd, uint32_t plane_id)
 	}
 
 	return res;
-}
-
-static int LS7A_CreateCustomGEM(int fd, struct armsoc_create_gem * pCreate_gem)
-{
-	int ret;
-	unsigned int pitch;
-	unsigned int flags = OMAP_BO_WC;
-	uint32_t size;
-	union omap_gem_size gsize;
-	struct drm_omap_gem_new create_omap;
-
-	/* 32 bytes pitch for OMAP = 16 bytes pitch for gc320 */
-	pitch = ALIGN(pCreate_gem->width * ((pCreate_gem->bpp + 7) / 8), 32);
-
-	xf86Msg(X_INFO, "LS7A_CreateCustomGEM: %d %d %d\n", 
-	        pCreate_gem->width, pCreate_gem->bpp, pitch);
-
-	if (pCreate_gem->buf_type == ARMSOC_BO_SCANOUT)
-		flags |= OMAP_BO_SCANOUT;
-
-	size = pCreate_gem->height * pitch;
-	gsize.bytes = size;
-	create_omap.size = gsize;
-	create_omap.flags = flags;
-
-	ret = drmIoctl(fd, DRM_IOCTL_OMAP_GEM_NEW, &create_omap);
-	if (ret)
-		return ret;
-
-	/* Convert custom create_omap to generic create_gem */
-	pCreate_gem->handle = create_omap.handle;
-	pCreate_gem->pitch = pitch;
-	pCreate_gem->size = create_omap.size.bytes;
-
-	return 0;
 }
 
 

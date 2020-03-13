@@ -42,22 +42,22 @@ ERROR_CFLAGS = -Wall -Wdeclaration-after-statement -Wvla \
 	-Waddress -Waggregate-return -Wno-multichar -Wnested-externs
  
 AM_CFLAGS = @XORG_CFLAGS@ $(LOONGSON_CFLAGS)
-omap5_drv_la_LTLIBRARIES = omap5_drv.la
-omap5_drv_la_LDFLAGS = -module -avoid-version -no-undefined
-omap5_drv_la_LIBADD = @XORG_LIBS@
-omap5_drv_ladir = @moduledir@/drivers
+loongson7a_drv_la_LTLIBRARIES = loongson7a_drv.la
+loongson7a_drv_la_LDFLAGS = -module -avoid-version -no-undefined
+loongson7a_drv_la_LIBADD = @XORG_LIBS@
+loongson7a_drv_ladir = @moduledir@/drivers
 
-omap5_drv_la_SOURCES = \
-         drmmode_display.c \
-         armsoc_exa.c \
-         armsoc_exa_null.c \
-         armsoc_dri2.c \
-         armsoc_driver.c \
-         armsoc_dumb.c \
-         armsoc_dri3.c \
-         armsoc_present.c \
-         armsoc_xv.c \
-         viv2d/queue.c \
-         viv2d/etnaviv_extra.c \
-         viv2d/viv2d_exa.c \
-         drmmode_loongson7a.c
+loongson7a_drv_la_SOURCES = \
+	drmmode_loongson7a.c \
+	drmmode_display.c \
+	armsoc_exa.c \
+	armsoc_exa_null.c \
+	armsoc_dri2.c \
+	armsoc_driver.c \
+	armsoc_dumb.c \
+	armsoc_dri3.c \
+	armsoc_present.c \
+	armsoc_xv.c \
+	viv2d/queue.c \
+	viv2d/etnaviv_extra.c \
+	viv2d/viv2d_exa.c

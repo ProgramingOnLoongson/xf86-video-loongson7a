@@ -54,14 +54,20 @@
 
 #define DRM_DEVICE "/dev/dri/card%d"
 
+/* Driver name as used in config file */
+#define ARMSOC_DRIVER_NAME	"loongson7a"
+
+/* Apparently not used by X server */
+#define LOONGSON7A_VERSION		1000
+
 Bool armsocDebug;
 
 /*
  * Forward declarations:
  */
-static const OptionInfoRec *ARMSOCAvailableOptions(int chipid, int busid);
-static void ARMSOCIdentify(int flags);
-static Bool ARMSOCProbe(DriverPtr drv, int flags);
+static const OptionInfoRec *AvailableOptions(int chipid, int busid);
+static void Identify(int flags);
+static Bool Probe(DriverPtr drv, int flags);
 static Bool ARMSOCPreInit(ScrnInfoPtr pScrn, int flags);
 static Bool ARMSOCScreenInit(SCREEN_INIT_ARGS_DECL);
 static void ARMSOCLoadPalette(ScrnInfoPtr pScrn, int numColors, int *indices,
@@ -82,11 +88,11 @@ static void ARMSOCFreeScreen(FREE_SCREEN_ARGS_DECL);
  * the all-upper-case version of the driver name.
  */
 _X_EXPORT DriverRec ARMSOC = {
-	ARMSOC_VERSION,
+	LOONGSON7A_VERSION,
 	(char *)ARMSOC_DRIVER_NAME,
-	ARMSOCIdentify,
-	ARMSOCProbe,
-	ARMSOCAvailableOptions,
+	Identify,
+	Probe,
+	AvailableOptions,
 	NULL,
 	0,
 	NULL,
@@ -143,8 +149,7 @@ static struct ARMSOCConnection {
 	int master_count;
 } connection = {NULL, NULL, 0, -1, 0, 0};
 
-static int
-ARMSOCSetDRMMaster(void)
+static int ARMSOCSetDRMMaster(void)
 {
 	int ret = 0;
 
@@ -159,8 +164,7 @@ ARMSOCSetDRMMaster(void)
 	return ret;
 }
 
-static int
-ARMSOCDropDRMMaster(void)
+static int ARMSOCDropDRMMaster(void)
 {
 	int ret = 0;
 
@@ -537,10 +541,10 @@ exit:
 
 
 /** Let the XFree86 code know the Setup() function. */
-static MODULESETUPPROTO(ARMSOCSetup);
+static MODULESETUPPROTO(Setup);
 
 /** Provide basic version information to the XFree86 code. */
-static XF86ModuleVersionInfo ARMSOCVersRec = {
+static XF86ModuleVersionInfo VersRec = {
 	ARMSOC_DRIVER_NAME,
 	MODULEVENDORSTRING,
 	MODINFOSTRING1,
@@ -556,27 +560,29 @@ static XF86ModuleVersionInfo ARMSOCVersRec = {
 };
 
 /** Let the XFree86 code know about the VersRec and Setup() function. */
-_X_EXPORT XF86ModuleData omap5ModuleData = { &ARMSOCVersRec, ARMSOCSetup, NULL };
+_X_EXPORT XF86ModuleData loongson7aModuleData = { &VersRec, Setup, NULL };
 
 
 /**
- * The first function that the XFree86 code calls, after loading this module.
+ * The first function that the XFree86 code calls, after loading this .
  */
-static pointer
-ARMSOCSetup(pointer module, pointer opts, int *errmaj, int *errmin)
+static void * Setup(pointer module, pointer opts, int *errmaj, int *errmin)
 {
 	static Bool setupDone = FALSE;
 
 	/* This module should be loaded only once, but check to be sure: */
-	if (!setupDone) {
+	if (!setupDone)
+	{
 		setupDone = TRUE;
 		xf86AddDriver(&ARMSOC, module, 0);
 
 		/* The return value must be non-NULL on success even
 		 * though there is no TearDownProc.
 		 */
-		return (pointer) 1;
-	} else {
+		return (void *) 1;
+	}
+	else
+	{
 		if (errmaj)
 			*errmaj = LDR_ONCEONLY;
 		return NULL;
@@ -588,8 +594,7 @@ ARMSOCSetup(pointer module, pointer opts, int *errmaj, int *errmin)
  * options to the "-configure" option, so that an xorg.conf file can be built
  * and the user can see which options are available for them to use.
  */
-static const OptionInfoRec *
-ARMSOCAvailableOptions(int chipid, int busid)
+static const OptionInfoRec * AvailableOptions(int chipid, int busid)
 {
 	return ARMSOCOptions;
 }
@@ -598,11 +603,9 @@ ARMSOCAvailableOptions(int chipid, int busid)
  * The mandatory Identify() function.  It is run before Probe(), and prints out
  * an identifying message.
  */
-static void
-ARMSOCIdentify(int flags)
+static void Identify(int flags)
 {
-	xf86Msg(X_INFO, "%s: Driver for LOONGSON7a1000 compatible chipsets\n", 
-			ARMSOC_NAME);
+	xf86Msg(X_INFO, "%s: Driver for LOONGSON7A compatible chipsets\n", ARMSOC_NAME);
 }
 
 /**
@@ -612,8 +615,7 @@ ARMSOCIdentify(int flags)
  * claim the instances, and allocate a ScrnInfoRec.  Only minimal hardware
  * probing is allowed here.
  */
-static Bool
-ARMSOCProbe(DriverPtr drv, int flags)
+static Bool Probe(DriverPtr drv, int flags)
 {
 	int i;
 	ScrnInfoPtr pScrn;
@@ -625,20 +627,25 @@ ARMSOCProbe(DriverPtr drv, int flags)
 	 * return (error out) if there are none:
 	 */
 	numDevSections = xf86MatchDevice(ARMSOC_DRIVER_NAME, &devSections);
-	if (numDevSections <= 0) {
+	if (numDevSections <= 0)
+	{
 		EARLY_ERROR_MSG(
 		    "Did not find any matching device section in configuration file");
-		if (flags & PROBE_DETECT) {
+		if (flags & PROBE_DETECT)
+		{
 			/* if we are probing, assume one and lets see if we can
 			 * open the device to confirm it is there:
 			 */
 			numDevSections = 1;
-		} else {
-			goto out;
+		}
+		else
+		{
+			return FALSE;
 		}
 	}
 
-	for (i = 0; i < numDevSections; i++) {
+	for (i = 0; i < numDevSections; ++i)
+	{
 		int fd;
 
 		if (devSections) {
@@ -647,19 +654,13 @@ ARMSOCProbe(DriverPtr drv, int flags)
 			const char *cardNumStr;
 
 			/* get the Bus ID */
-			busIdStr = xf86FindOptionValue(
-			               devSections[i]->options,
-			               "BusID");
+			busIdStr = xf86FindOptionValue( devSections[i]->options, "BusID");
 
 			/* get the DriverName */
-			driverNameStr = xf86FindOptionValue(
-			                    devSections[i]->options,
-			                    "DriverName");
+			driverNameStr = xf86FindOptionValue( devSections[i]->options, "DriverName");
 
 			/* get the card_num from xorg.conf if present */
-			cardNumStr = xf86FindOptionValue(
-			                 devSections[i]->options,
-			                 "DRICard");
+			cardNumStr = xf86FindOptionValue( devSections[i]->options, "DRICard");
 
 			if (busIdStr && driverNameStr) {
 				EARLY_WARNING_MSG(
@@ -672,31 +673,32 @@ ARMSOCProbe(DriverPtr drv, int flags)
 				}
 			}
 
-			if (busIdStr) {
+			if (busIdStr)
+			{
 				if (0 == strlen(busIdStr)) {
 					EARLY_ERROR_MSG(
 					    "Missing value for Option BusID");
 					return FALSE;
 				}
 				connection.bus_id = busIdStr;
-			} else if (driverNameStr) {
+			}
+			else if (driverNameStr)
+			{
 				if (0 == strlen(driverNameStr)) {
 					EARLY_ERROR_MSG(
 					    "Missing value for Option DriverName");
 					return FALSE;
 				}
 				connection.driver_name = driverNameStr;
-			} else if (cardNumStr) {
+			}
+			else if (cardNumStr)
+			{
 				char *endptr;
 				errno = 0;
-				connection.card_num = strtol(cardNumStr,
-				                             &endptr, 10);
-				if (('\0' == *cardNumStr) ||
-				        ('\0' != *endptr) ||
+				connection.card_num = strtol(cardNumStr, &endptr, 10);
+				if (('\0' == *cardNumStr) || ('\0' != *endptr) ||
 				        (errno != 0)) {
-					EARLY_ERROR_MSG(
-					    "Bad Option DRICard value : %s",
-					    cardNumStr);
+					EARLY_ERROR_MSG( "Bad Option DRICard value : %s", cardNumStr);
 					return FALSE;
 				}
 			}
@@ -717,8 +719,7 @@ ARMSOCProbe(DriverPtr drv, int flags)
 			 * data structure and hook it into the ScrnInfoRec's
 			 * driverPrivate field.
 			 */
-			pScrn->driverPrivate =
-			    calloc(1, sizeof(*pARMSOC));
+			pScrn->driverPrivate = calloc(1, sizeof(*pARMSOC));
 			if (!pScrn->driverPrivate)
 				return FALSE;
 
@@ -756,10 +757,10 @@ ARMSOCProbe(DriverPtr drv, int flags)
 
 			foundScreen = TRUE;
 
-			pScrn->driverVersion = ARMSOC_VERSION;
+			pScrn->driverVersion = LOONGSON7A_VERSION;
 			pScrn->driverName    = (char *)ARMSOC_DRIVER_NAME;
 			pScrn->name          = (char *)ARMSOC_NAME;
-			pScrn->Probe         = ARMSOCProbe;
+			pScrn->Probe         = Probe;
 			pScrn->PreInit       = ARMSOCPreInit;
 			pScrn->ScreenInit    = ARMSOCScreenInit;
 			pScrn->SwitchMode    = ARMSOCSwitchMode;
