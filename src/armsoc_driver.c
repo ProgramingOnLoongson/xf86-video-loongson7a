@@ -40,6 +40,8 @@
 #include <sys/mman.h>
 
 #include <pixman.h>
+#include <xf86drmMode.h>
+#include <xf86drm.h>
 
 #include "armsoc_driver.h"
 
@@ -52,13 +54,24 @@
 
 #include "drmmode_driver.h"
 
-#define DRM_DEVICE "/dev/dri/card%d"
-
 /* Driver name as used in config file */
 #define ARMSOC_DRIVER_NAME	"loongson7a"
-
+/** Supported "chipsets." */
+#define ARMSOC_CHIPSET_NAME "LOONGSON7A1000"
 /* Apparently not used by X server */
 #define LOONGSON7A_VERSION		1000
+
+
+/* Cursor dimensions
+ * Technically we probably don't have any size limit, since we are just 
+ * using an overlay. But xserver will always create cursor images in the
+ * max size, so don't use width/height values that are too big
+ */
+
+#define CURSORW   (64)
+#define CURSORH   (64)
+/* Padding added down each side of cursor image */
+#define CURSORPAD (0)
 
 Bool armsocDebug;
 
@@ -70,7 +83,7 @@ static void Identify(int flags);
 static Bool Probe(DriverPtr drv, int flags);
 static Bool ARMSOCPreInit(ScrnInfoPtr pScrn, int flags);
 static Bool ARMSOCScreenInit(SCREEN_INIT_ARGS_DECL);
-static void ARMSOCLoadPalette(ScrnInfoPtr pScrn, int numColors, int *indices,
+static void LoadPalette(ScrnInfoPtr pScrn, int numColors, int *indices,
                               LOCO *colors, VisualPtr pVisual);
 static Bool ARMSOCCloseScreen(CLOSE_SCREEN_ARGS_DECL);
 static Bool ARMSOCCreateScreenResources(ScreenPtr pScreen);
@@ -87,9 +100,9 @@ static void ARMSOCFreeScreen(FREE_SCREEN_ARGS_DECL);
  * before it calls the Probe() function.  The name of this structure must be
  * the all-upper-case version of the driver name.
  */
-_X_EXPORT DriverRec ARMSOC = {
+_X_EXPORT DriverRec Loongson7a = {
 	LOONGSON7A_VERSION,
-	(char *)ARMSOC_DRIVER_NAME,
+	ARMSOC_DRIVER_NAME,
 	Identify,
 	Probe,
 	AvailableOptions,
@@ -102,8 +115,7 @@ _X_EXPORT DriverRec ARMSOC = {
 #endif
 };
 
-/** Supported "chipsets." */
-#define ARMSOC_CHIPSET_NAME "LOONGSON7A"
+
 
 /** Supported options, as enum values. */
 enum {
@@ -118,7 +130,7 @@ enum {
 };
 
 /** Supported options. */
-static const OptionInfoRec ARMSOCOptions[] = {
+static const OptionInfoRec Options[] = {
 	{ OPTION_DEBUG,      "Debug",      OPTV_BOOLEAN, {0}, FALSE },
 	{ OPTION_NO_FLIP,    "NoFlip",     OPTV_BOOLEAN, {0}, FALSE },
 	{ OPTION_CARD_NUM,   "DRICard",    OPTV_INTEGER, {0}, FALSE },
@@ -130,7 +142,56 @@ static const OptionInfoRec ARMSOCOptions[] = {
 	{ -1,                NULL,         OPTV_NONE,    {0}, FALSE }
 };
 
-extern struct drmmode_interface loongson7a_interface;
+
+
+static int LS7A_InitPlaneForCursor(int drm_fd, uint32_t plane_id)
+{
+	int res = -1;
+	drmModeObjectPropertiesPtr props;
+	props = drmModeObjectGetProperties(drm_fd, plane_id, DRM_MODE_OBJECT_PLANE);
+	if (props)
+	{
+		uint32_t i;
+
+		for (i = 0; i < props->count_props; ++i)
+		{
+			drmModePropertyPtr this_prop;
+			this_prop = drmModeGetProperty(drm_fd, props->props[i]);
+
+			if (this_prop)
+			{
+				if (!strncmp(this_prop->name, "zorder", DRM_PROP_NAME_LEN))
+				{
+					res = drmModeObjectSetProperty(drm_fd, plane_id, DRM_MODE_OBJECT_PLANE, this_prop->prop_id, 1);
+					drmModeFreeProperty(this_prop);
+					break;
+				}
+				drmModeFreeProperty(this_prop);
+			}
+		}
+		drmModeFreeObjectProperties(props);
+	}
+	return res;
+}
+
+
+static struct drmmode_interface loongson7a_interface = {
+	/* Must match name used in the kernel driver */
+	.driver_name = "loongson-drm",
+	/* DRM page flip events should be requested and waited for 
+	 * during DRM_IOCTL_MODE_PAGE_FLIP. */
+	.use_page_flip_events = 1,
+	/* allows the next back buffer to be obtained while 
+	 * the previous is being flipped. */
+	.use_early_display = 1,
+	.cursor_width = CURSORW,
+	.cursor_height = CURSORH,
+	.cursor_padding = CURSORPAD,
+	/* No hardware cursor - use a software cursor */
+	.cursor_api = HWCURSOR_API_NONE,
+	.init_plane_for_cursor = LS7A_InitPlaneForCursor,
+	.vblank_query_supported = 0,
+};
 
 
 static struct drmmode_interface *interfaces[] = {
@@ -181,7 +242,7 @@ static int ARMSOCDropDRMMaster(void)
 }
 
 
-static void ARMSOCShowDriverInfo(int fd)
+static void ShowDriverInfo(int fd)
 {
 	char *bus_id;
 	drmVersionPtr version;
@@ -189,26 +250,25 @@ static void ARMSOCShowDriverInfo(int fd)
 
 	EARLY_INFO_MSG("Opened DRM");
 	deviceName = drmGetDeviceNameFromFd(fd);
-	EARLY_INFO_MSG("   DeviceName is [%s]",
-	               deviceName ? deviceName : "NULL");
+	EARLY_INFO_MSG("DeviceName is [%s]", deviceName ? deviceName : "NULL");
 	drmFree(deviceName);
+	
 	bus_id = drmGetBusid(fd);
-	EARLY_INFO_MSG("   bus_id is [%s]",
-	               bus_id ? bus_id : "NULL");
+
+	EARLY_INFO_MSG("bus_id is [%s]", bus_id ? bus_id : "NULL");
 	drmFreeBusid(bus_id);
 	version = drmGetVersion(fd);
-	if (version) {
-		EARLY_INFO_MSG("   DriverName is [%s]",
-		               version->name);
-		EARLY_INFO_MSG("   version is [%d.%d.%d]",
-		               version->version_major,
-		               version->version_minor,
-		               version->version_patchlevel);
+	if (version)
+	{
+		EARLY_INFO_MSG("DriverName is [%s]", version->name);
+		EARLY_INFO_MSG("version is [%d.%d.%d]", version->version_major, 
+			version->version_minor, version->version_patchlevel);
 		drmFreeVersion(version);
-	} else {
-		EARLY_INFO_MSG("   version is [NULL]");
 	}
-	return;
+	else
+	{
+		EARLY_INFO_MSG("version is [NULL]");
+	}
 }
 
 int ARMSOCDetectDevice(const char *name)
@@ -241,11 +301,12 @@ int ARMSOCDetectDevice(const char *name)
 	return -1;
 }
 
-static int ARMSOCOpenDRMCard(void)
+static int OpenDRMCard(void)
 {
 	int fd;
 
-	if ((connection.bus_id) || (connection.driver_name)) {
+	if ((connection.bus_id) || (connection.driver_name))
+	{
 		/* user specified bus ID or driver name - pass to drmOpen */
 		EARLY_INFO_MSG("Opening driver [%s], bus_id [%s]",
 		               connection.driver_name ?
@@ -266,7 +327,7 @@ static int ARMSOCOpenDRMCard(void)
 
 		if (connection.card_num)
 		{
-			snprintf(filename, sizeof(filename), DRM_DEVICE, card_num);
+			snprintf(filename, sizeof(filename), "/dev/dri/card%d", card_num);
 			EARLY_INFO_MSG(
 			    "No BusID or DriverName specified - opening %s", filename);
 			fd = open(filename, O_RDWR, 0);
@@ -328,7 +389,9 @@ static int ARMSOCOpenDRMCard(void)
 		if (fd < 0)
 			goto fail2;
 	}
-	ARMSOCShowDriverInfo(fd);
+	
+	ShowDriverInfo(fd);
+	
 	return fd;
 
 fail1:
@@ -349,7 +412,7 @@ static Bool ARMSOCOpenDRM(ScrnInfoPtr pScrn)
 	if (connection.fd < 0) {
 		assert(!connection.open_count);
 		assert(!connection.master_count);
-		pARMSOC->drmFD = ARMSOCOpenDRMCard();
+		pARMSOC->drmFD = OpenDRMCard();
 		if (pARMSOC->drmFD < 0)
 			return FALSE;
 		/* Check that what we are or can become drm master by
@@ -574,7 +637,7 @@ static void * Setup(pointer module, pointer opts, int *errmaj, int *errmin)
 	if (!setupDone)
 	{
 		setupDone = TRUE;
-		xf86AddDriver(&ARMSOC, module, 0);
+		xf86AddDriver(&Loongson7a, module, 0);
 
 		/* The return value must be non-NULL on success even
 		 * though there is no TearDownProc.
@@ -596,7 +659,7 @@ static void * Setup(pointer module, pointer opts, int *errmaj, int *errmin)
  */
 static const OptionInfoRec * AvailableOptions(int chipid, int busid)
 {
-	return ARMSOCOptions;
+	return Options;
 }
 
 /**
@@ -675,9 +738,9 @@ static Bool Probe(DriverPtr drv, int flags)
 
 			if (busIdStr)
 			{
-				if (0 == strlen(busIdStr)) {
-					EARLY_ERROR_MSG(
-					    "Missing value for Option BusID");
+				if (0 == strlen(busIdStr))
+				{
+					EARLY_ERROR_MSG( "Missing value for Option BusID");
 					return FALSE;
 				}
 				connection.bus_id = busIdStr;
@@ -685,8 +748,7 @@ static Bool Probe(DriverPtr drv, int flags)
 			else if (driverNameStr)
 			{
 				if (0 == strlen(driverNameStr)) {
-					EARLY_ERROR_MSG(
-					    "Missing value for Option DriverName");
+					EARLY_ERROR_MSG( "Missing value for Option DriverName");
 					return FALSE;
 				}
 				connection.driver_name = driverNameStr;
@@ -703,7 +765,7 @@ static Bool Probe(DriverPtr drv, int flags)
 				}
 			}
 		}
-		fd = ARMSOCOpenDRMCard();
+		fd = OpenDRMCard();
 		if (fd >= 0) {
 			struct ARMSOCRec *pARMSOC;
 
@@ -752,8 +814,7 @@ static Bool Probe(DriverPtr drv, int flags)
 				pARMSOC->crtcNum = i;
 
 			xf86Msg(X_INFO, "Screen:%d,  CRTC:%d\n",
-			        pScrn->scrnIndex,
-			        pARMSOC->crtcNum);
+			        pScrn->scrnIndex, pARMSOC->crtcNum);
 
 			foundScreen = TRUE;
 
@@ -902,24 +963,23 @@ static Bool ARMSOCPreInit(ScrnInfoPtr pScrn, int flags)
 
 	/* set chipset name: */
 	pScrn->chipset = (char *)ARMSOC_CHIPSET_NAME;
-	INFO_MSG("Chipset: %s", pScrn->chipset);
+	xf86DrvMsg(pScrn->scrnIndex, X_INFO, " Chipset: %s \n", pScrn->chipset);
 
 	/*
 	 * Process the "xorg.conf" file options:
 	 */
 	xf86CollectOptions(pScrn, NULL);
-	pARMSOC->pOptionInfo = malloc(sizeof(ARMSOCOptions));
+	pARMSOC->pOptionInfo = malloc(sizeof(Options));
 	if (!pARMSOC->pOptionInfo)
 		goto fail2;
 
-	memcpy(pARMSOC->pOptionInfo, ARMSOCOptions, sizeof(ARMSOCOptions));
+	memcpy(pARMSOC->pOptionInfo, Options, sizeof(Options));
 	xf86ProcessOptions(pScrn->scrnIndex,
 	                   pARMSOC->pEntityInfo->device->options,
 	                   pARMSOC->pOptionInfo);
 
 	/* Determine if the user wants debug messages turned on: */
-	armsocDebug = xf86ReturnOptValBool(pARMSOC->pOptionInfo,
-	                                   OPTION_DEBUG, FALSE);
+	armsocDebug = xf86ReturnOptValBool(pARMSOC->pOptionInfo, OPTION_DEBUG, FALSE);
 
 	if (!xf86GetOptValInteger(pARMSOC->pOptionInfo, OPTION_DRI_NUM_BUF,
 	                          &driNumBufs)) {
@@ -939,30 +999,31 @@ static Bool ARMSOCPreInit(ScrnInfoPtr pScrn, int flags)
 	/* Determine if user wants to disable buffer flipping: */
 	pARMSOC->NoFlip = xf86ReturnOptValBool(pARMSOC->pOptionInfo,
 	                                       OPTION_NO_FLIP, FALSE);
-	INFO_MSG("Buffer Flipping is %s",
-	         pARMSOC->NoFlip ? "Disabled" : "Enabled");
+	xf86DrvMsg(pScrn->scrnIndex, X_INFO, 
+		"Buffer Flipping is %s\n", pARMSOC->NoFlip ? "Disabled" : "Enabled");
 
 	pARMSOC->SoftExa = xf86ReturnOptValBool(pARMSOC->pOptionInfo,
 	                                        OPTION_SOFT_EXA, FALSE);
-	INFO_MSG("Hardware EXA is %s",
-	         pARMSOC->SoftExa ? "Disabled" : "Enabled");
+	xf86DrvMsg(pScrn->scrnIndex, X_INFO, 
+		"Hardware EXA is %s\n", pARMSOC->SoftExa ? "Disabled" : "Enabled");
 
 	/*
 	 * Select the video modes:
 	 */
-	INFO_MSG("Setting the video modes ...");
+	xf86DrvMsg(pScrn->scrnIndex, X_INFO, "Setting the video modes ... \n");
 
-	/* Don't call drmCheckModesettingSupported() as its written only for
-	 * PCI devices.
+	/* Don't call drmCheckModesettingSupported() as its written only for PCI devices.
 	 */
 
 	/* Do initial KMS setup: */
-	if (!drmmode_pre_init(pScrn, pARMSOC->drmFD,
-	                      (pScrn->bitsPerPixel >> 3))) {
+	if (!drmmode_pre_init(pScrn, pARMSOC->drmFD, (pScrn->bitsPerPixel >> 3)))
+	{
 		ERROR_MSG("Cannot get KMS resources");
 		goto fail2;
-	} else {
-		INFO_MSG("Got KMS resources");
+	}
+	else
+	{
+		xf86DrvMsg(pScrn->scrnIndex, X_INFO, " Initial KMS successful. \n");
 	}
 
 	xf86RandR12PreInit(pScrn);
@@ -1008,26 +1069,31 @@ fail:
 /**
  * Initialize EXA and DRI2
  */
-static void ARMSOCAccelInit(ScreenPtr pScreen)
+static void LS7A_AccelInit(ScreenPtr pScreen)
 {
 	ScrnInfoPtr pScrn = xf86ScreenToScrn(pScreen);
 	struct ARMSOCRec *pARMSOC = ARMSOCPTR(pScrn);
 
-	if (!pARMSOC->SoftExa) {
-		if (!pARMSOC->pARMSOCEXA)
-			pARMSOC->pARMSOCEXA = InitViv2DEXA(pScreen, pScrn,
-			                                   pARMSOC->drmFD);
+	if ((0 == pARMSOC->SoftExa) && (NULL == pARMSOC->pARMSOCEXA))
+	{
+		pARMSOC->pARMSOCEXA = InitViv2DEXA(pScreen, pScrn, pARMSOC->drmFD);
 	}
-	if (!pARMSOC->pARMSOCEXA)
-		pARMSOC->pARMSOCEXA = InitNullEXA(pScreen, pScrn,
-		                                  pARMSOC->drmFD);
-	
-	if (pARMSOC->pARMSOCEXA) {
+
+	// Fall back to soft EXA
+	if ( (1 == pARMSOC->SoftExa) && (NULL == pARMSOC->pARMSOCEXA) )
+	{
+		pARMSOC->pARMSOCEXA = InitNullEXA(pScreen, pScrn, pARMSOC->drmFD);
+	}
+
+	if (pARMSOC->pARMSOCEXA)
+	{
 		pARMSOC->dri2 = ARMSOCDRI2ScreenInit(pScreen); // DRI2
 		pARMSOC->dri3 = ARMSOCDRI3ScreenInit(pScreen); // DRI3
 		armsoc_present_screen_init(pScreen); // Present
 		ARMSOCVideoScreenInit(pScreen); // XV
-	} else {
+	}
+	else
+	{
 		pARMSOC->dri2 = FALSE;
 		pARMSOC->dri3 = FALSE;
 	}
@@ -1163,13 +1229,12 @@ static Bool ARMSOCScreenInit(SCREEN_INIT_ARGS_DECL)
 	 * miDCInitialize() otherwise stacking order for wrapped ScreenPtr fxns
 	 * ends up in the wrong order.
 	 */
-	ARMSOCAccelInit(pScreen);
+	LS7A_AccelInit(pScreen);
 
 	/* Initialize backing store: */
 	xf86SetBackingStore(pScreen);
 
-	fbdev = xf86GetOptValString(pARMSOC->pOptionInfo,
-	                            OPTION_INIT_FROM_FBDEV);
+	fbdev = xf86GetOptValString(pARMSOC->pOptionInfo, OPTION_INIT_FROM_FBDEV);
 	if (fbdev && *fbdev != '\0') {
 		if (ARMSOCCopyFB(pScrn, fbdev)) {
 			/* Only allow None BG root if we initialized the scanout
@@ -1213,7 +1278,8 @@ static Bool ARMSOCScreenInit(SCREEN_INIT_ARGS_DECL)
 	}
 
 	if (!xf86HandleColormaps(pScreen, 1 << pScrn->rgbBits, pScrn->rgbBits,
-	                         ARMSOCLoadPalette, NULL, CMAP_PALETTED_TRUECOLOR)) {
+	                         LoadPalette, NULL, CMAP_PALETTED_TRUECOLOR))
+	{
 		ERROR_MSG("xf86HandleColormaps() failed!");
 		goto fail8;
 	}
@@ -1282,8 +1348,7 @@ fail:
 }
 
 
-static void
-ARMSOCLoadPalette(ScrnInfoPtr pScrn, int numColors, int *indices,
+static void LoadPalette(ScrnInfoPtr pScrn, int numColors, int *indices,
                   LOCO *colors, VisualPtr pVisual)
 {
 	TRACE_ENTER();

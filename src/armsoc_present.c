@@ -46,8 +46,8 @@
 #include "armsoc_driver.h"
 #include "drmmode_display.h"
 
-//#define ARMSOC_PRESENT_FLIP 1
-//#define ARMSOC_PRESENT_WAIT_VBLANK 1
+#define ARMSOC_PRESENT_FLIP 1
+#define ARMSOC_PRESENT_WAIT_VBLANK 1
 
 #define ARMSOC_PRESENT_DBG_MSG(fmt, ...)
 /*#define ARMSOC_PRESENT_DBG_MSG(fmt, ...) \

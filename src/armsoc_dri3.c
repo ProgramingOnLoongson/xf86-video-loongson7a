@@ -25,7 +25,7 @@
 
 #include "drmmode_driver.h"
 
-static Bool ARMSOCDRI3Authorise(struct ARMSOCRec *pARMSOC, int fd)
+static Bool LS7A_DRI3Authorise(struct ARMSOCRec *pARMSOC, int fd)
 {
 	int ret;
 	struct stat st;
@@ -57,7 +57,7 @@ static Bool ARMSOCDRI3Authorise(struct ARMSOCRec *pARMSOC, int fd)
 	return TRUE;
 }
 
-static int ARMSOCDRI3Open(ScreenPtr pScreen, RRProviderPtr provider, int *o)
+static int LS7A_DRI3Open(ScreenPtr pScreen, RRProviderPtr provider, int *o)
 {
 	ScrnInfoPtr pScrn = xf86ScreenToScrn(pScreen);
 	struct ARMSOCRec *pARMSOC = ARMSOCPTR(pScrn);
@@ -65,13 +65,16 @@ static int ARMSOCDRI3Open(ScreenPtr pScreen, RRProviderPtr provider, int *o)
 //	int fd = drmOpen(pARMSOC->deviceName, NULL);
 	int fd = open(pARMSOC->deviceName, O_RDWR | O_CLOEXEC);
 	if (fd < 0) {
-		ERROR_MSG(" cannot open %s", pARMSOC->deviceName);
+		ERROR_MSG(" LS7A_DRI3Open: cannot open %s", pARMSOC->deviceName);
 		return BadAlloc;
-	} else {
-		INFO_MSG(" %s opened in %d",  pARMSOC->deviceName, fd);
+	}
+	else
+	{
+		xf86DrvMsg(pScrn->scrnIndex, X_INFO, "%s opened in %d\n", 
+				pARMSOC->deviceName, fd);
 	}
 
-	if (!ARMSOCDRI3Authorise(pARMSOC, fd)) {
+	if (!LS7A_DRI3Authorise(pARMSOC, fd)) {
 		ERROR_MSG(" cannot authorize %s : %d", pARMSOC->deviceName, fd);
 		close(fd);
 		return BadMatch;
@@ -82,7 +85,7 @@ static int ARMSOCDRI3Open(ScreenPtr pScreen, RRProviderPtr provider, int *o)
 	return Success;
 }
 
-static PixmapPtr ARMSOCDRI3PixmapFromFD(ScreenPtr pScreen, int fd,
+static PixmapPtr LS7A_DRI3PixmapFromFD(ScreenPtr pScreen, int fd,
                                         CARD16 width, CARD16 height, CARD16 stride, CARD8 depth, CARD8 bpp)
 {
 	ScrnInfoPtr pScrn = xf86ScreenToScrn(pScreen);
@@ -107,7 +110,7 @@ static PixmapPtr ARMSOCDRI3PixmapFromFD(ScreenPtr pScreen, int fd,
 		return NullPixmap;
 	}
 
-	INFO_MSG("ARMSOCDRI3PixmapFromFD pixmap:%p pix:%p bo:%p %dx%d %d/%d %d->%d", pixmap, priv, priv->bo, width, height, depth, bpp, stride, pixmap->devKind);
+	INFO_MSG("DRI3PixmapFromFD pixmap:%p pix:%p bo:%p %dx%d %d/%d %d->%d", pixmap, priv, priv->bo, width, height, depth, bpp, stride, pixmap->devKind);
 
 	armsoc_bo_put_dmabuf(priv->bo, fd);
 
@@ -117,13 +120,13 @@ static PixmapPtr ARMSOCDRI3PixmapFromFD(ScreenPtr pScreen, int fd,
 	return pixmap;
 }
 
-static int ARMSOCDRI3FDFromPixmap(ScreenPtr pScreen, PixmapPtr pixmap,
+static int LS7A_DRI3FDFromPixmap(ScreenPtr pScreen, PixmapPtr pixmap,
                                   CARD16 *stride, CARD32 *size)
 {
 	ScrnInfoPtr pScrn = xf86ScreenToScrn(pScreen);
 	struct ARMSOCPixmapPrivRec *priv = exaGetPixmapDriverPrivate(pixmap);
 
-	INFO_MSG("ARMSOCDRI3FDFromPixmap");
+	INFO_MSG("DRI3FDFromPixmap");
 
 	/* Only support pixmaps backed by an etnadrm bo */
 	if (!priv || !priv->bo)
@@ -137,9 +140,9 @@ static int ARMSOCDRI3FDFromPixmap(ScreenPtr pScreen, PixmapPtr pixmap,
 
 static dri3_screen_info_rec armsoc_dri3_info = {
 	.version = 0,
-	.open = ARMSOCDRI3Open,
-	.pixmap_from_fd = ARMSOCDRI3PixmapFromFD,
-	.fd_from_pixmap = ARMSOCDRI3FDFromPixmap,
+	.open = LS7A_DRI3Open,
+	.pixmap_from_fd = LS7A_DRI3PixmapFromFD,
+	.fd_from_pixmap = LS7A_DRI3FDFromPixmap,
 };
 
 Bool ARMSOCDRI3ScreenInit(ScreenPtr pScreen)
@@ -157,7 +160,7 @@ Bool ARMSOCDRI3ScreenInit(ScreenPtr pScreen)
 	if (!miSyncShmScreenInit(pScreen))
 		return FALSE;
 
-	xf86DrvMsg(pScrn->scrnIndex, X_INFO, "Loongson DRI3 init. \n"); 
+	xf86DrvMsg(pScrn->scrnIndex, X_INFO, " DRI3 init. \n"); 
 
 	return dri3_screen_init(pScreen, &armsoc_dri3_info);
 }

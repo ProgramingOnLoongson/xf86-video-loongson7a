@@ -92,7 +92,7 @@ void armsoc_device_del(struct armsoc_device *dev)
 int armsoc_bo_set_dmabuf(struct armsoc_bo *bo)
 {
 	int res = 0;
-	#if 0
+	#if 1
 	struct drm_prime_handle prime_handle;
 
 	assert(bo->refcnt > 0);

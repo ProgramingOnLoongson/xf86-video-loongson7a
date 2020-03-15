@@ -1008,8 +1008,7 @@ ARMSOCDRI2ScheduleWaitMSC(ClientPtr client, DrawablePtr pDraw,
 /**
  * The DRI2 ScreenInit() function.. register our handler fxns w/ DRI2 core
  */
-Bool
-ARMSOCDRI2ScreenInit(ScreenPtr pScreen)
+Bool ARMSOCDRI2ScreenInit(ScreenPtr pScreen)
 {
 	ScrnInfoPtr pScrn = xf86ScreenToScrn(pScreen);
 	struct ARMSOCRec *pARMSOC = ARMSOCPTR(pScrn);
@@ -1022,7 +1021,7 @@ ARMSOCDRI2ScreenInit(ScreenPtr pScreen)
 	DRI2InfoRec info = {
 		.version         = 6,
 		.fd              = pARMSOC->drmFD,
-		.driverName      = "loongson-drm",
+		.driverName      = "etnaviv",
 		.deviceName      = pARMSOC->deviceName,
 		.CreateBuffer    = ARMSOCDRI2CreateBuffer,
 		.DestroyBuffer   = ARMSOCDRI2DestroyBuffer,
@@ -1056,8 +1055,7 @@ ARMSOCDRI2ScreenInit(ScreenPtr pScreen)
 /**
  * The DRI2 CloseScreen() function.. unregister ourself w/ DRI2 core.
  */
-void
-ARMSOCDRI2CloseScreen(ScreenPtr pScreen)
+void ARMSOCDRI2CloseScreen(ScreenPtr pScreen)
 {
 	ScrnInfoPtr pScrn = xf86ScreenToScrn(pScreen);
 	struct ARMSOCRec *pARMSOC = ARMSOCPTR(pScrn);

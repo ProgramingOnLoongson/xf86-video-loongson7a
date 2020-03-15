@@ -48,7 +48,6 @@ loongson7a_drv_la_LIBADD = @XORG_LIBS@
 loongson7a_drv_ladir = @moduledir@/drivers
 
 loongson7a_drv_la_SOURCES = \
-	drmmode_loongson7a.c \
 	drmmode_display.c \
 	armsoc_exa.c \
 	armsoc_exa_null.c \

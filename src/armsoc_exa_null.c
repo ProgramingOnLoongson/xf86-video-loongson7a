@@ -43,12 +43,12 @@ static void AllocBuf( struct ARMSOCEXARec *exa, int width, int height,
 	pBuf->pitch = pitch;
 	pBuf->size = size;
 
-	xf86Msg(X_INFO, " AllocBuffer:%p, pitch:%d\n", pBuf->buf, pitch);
+//	xf86Msg(X_INFO, " AllocBuffer:%p, pitch:%d\n", pBuf->buf, pitch);
 }
 
 static void FreeBuf(struct ARMSOCEXARec *exa, struct ARMSOCEXABuf * pBuf)
 {
-	NULL_DBG_MSG("FreeBuf buf:%p", pBuf->buf);
+//	NULL_DBG_MSG("FreeBuf buf:%p", pBuf->buf);
 	free( pBuf->buf );
 	pBuf->buf = NULL;
 	pBuf->pitch = 0;
@@ -113,69 +113,66 @@ static void FreeScreen(FREE_SCREEN_ARGS_DECL)
 
 struct ARMSOCEXARec * InitNullEXA(ScreenPtr pScreen, ScrnInfoPtr pScrn, int fd)
 {
-	struct ARMSOCNullEXARec *null_exa;
-
-	ExaDriverPtr exa;
+	struct ARMSOCNullEXARec *pSoftExa;
 
 	xf86DrvMsg(pScrn->scrnIndex, X_INFO, "Soft EXA mode enable \n");
 
-	null_exa = calloc(1, sizeof(*null_exa));
-	if (!null_exa)
-		goto out;
-
-
-	exa = exaDriverAlloc();
-	if (!exa)
-		goto free_null_exa;
-
-	null_exa->exa = exa;
-
-	exa->exa_major = EXA_VERSION_MAJOR;
-	exa->exa_minor = EXA_VERSION_MINOR;
-
-	exa->pixmapOffsetAlign = 0;
-	exa->pixmapPitchAlign = 32;
-	exa->flags = EXA_OFFSCREEN_PIXMAPS |
-	             EXA_HANDLES_PIXMAPS | EXA_SUPPORTS_PREPARE_AUX;
-	exa->maxX = 4096;
-	exa->maxY = 4096;
-
-	/* Required EXA functions: */
-	exa->WaitMarker = ARMSOCWaitMarker;
-	exa->CreatePixmap2 = ARMSOCCreatePixmap2;
-	exa->DestroyPixmap = ARMSOCDestroyPixmap;
-	exa->ModifyPixmapHeader = ARMSOCModifyPixmapHeader;
-
-	exa->PrepareAccess = ARMSOCPrepareAccess;
-	exa->FinishAccess = ARMSOCFinishAccess;
-	exa->PixmapIsOffscreen = ARMSOCPixmapIsOffscreen;
-
-	/* Always fallback for software operations */
-	exa->PrepareCopy = PrepareCopyFail;
-	exa->PrepareSolid = PrepareSolidFail;
-	exa->CheckComposite = CheckCompositeFail;
-	exa->PrepareComposite = PrepareCompositeFail;
-
-	if (!exaDriverInit(pScreen, exa)) {
-		ERROR_MSG("exaDriverInit failed");
-		goto free_exa;
+	pSoftExa = calloc(1, sizeof(*pSoftExa));
+	if ( NULL == pSoftExa )
+	{
+		return NULL;
 	}
 
-	struct ARMSOCEXARec *armsoc_exa = &null_exa->base;
-	armsoc_exa->Reattach = Reattach;
-	armsoc_exa->AllocBuf = AllocBuf;
-	armsoc_exa->FreeBuf = FreeBuf;
+	ExaDriverPtr pExaDrv = exaDriverAlloc();
+	if ( NULL == pExaDrv )
+	{
+		free( pSoftExa );
+		return NULL;
+	}
 
-	armsoc_exa->CloseScreen = CloseScreen;
-	armsoc_exa->FreeScreen = FreeScreen;
 
-	return armsoc_exa;
+	pExaDrv->exa_major = EXA_VERSION_MAJOR;
+	pExaDrv->exa_minor = EXA_VERSION_MINOR;
 
-free_exa:
-	free(exa);
-free_null_exa:
-	free(null_exa);
-out:
-	return NULL;
+	pExaDrv->pixmapOffsetAlign = 0;
+	pExaDrv->pixmapPitchAlign = 32;
+	pExaDrv->flags = EXA_OFFSCREEN_PIXMAPS |
+	             EXA_HANDLES_PIXMAPS | EXA_SUPPORTS_PREPARE_AUX;
+	pExaDrv->maxX = 2048;
+	pExaDrv->maxY = 2048;
+
+	/* Required EXA functions: */
+	pExaDrv->WaitMarker = ARMSOCWaitMarker;
+	pExaDrv->CreatePixmap2 = ARMSOCCreatePixmap2;
+	pExaDrv->DestroyPixmap = ARMSOCDestroyPixmap;
+	pExaDrv->ModifyPixmapHeader = ARMSOCModifyPixmapHeader;
+
+	pExaDrv->PrepareAccess = ARMSOCPrepareAccess;
+	pExaDrv->FinishAccess = ARMSOCFinishAccess;
+	pExaDrv->PixmapIsOffscreen = ARMSOCPixmapIsOffscreen;
+
+	/* Always fallback for software operations */
+	pExaDrv->PrepareCopy = PrepareCopyFail;
+	pExaDrv->PrepareSolid = PrepareSolidFail;
+	pExaDrv->CheckComposite = CheckCompositeFail;
+	pExaDrv->PrepareComposite = PrepareCompositeFail;
+
+	if (!exaDriverInit(pScreen, pExaDrv))
+	{
+		ERROR_MSG("exaDriverInit failed");
+		free(pExaDrv);
+		free(pSoftExa);
+		return NULL;
+	}
+
+	struct ARMSOCEXARec *pBase = &pSoftExa->base;
+	pBase->Reattach = Reattach;
+	pBase->AllocBuf = AllocBuf;
+	pBase->FreeBuf = FreeBuf;
+	pBase->CloseScreen = CloseScreen;
+	pBase->FreeScreen = FreeScreen;
+	pSoftExa->exa = pExaDrv;
+	
+	return pBase;
 }
 

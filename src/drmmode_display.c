@@ -255,14 +255,15 @@ drmmode_set_mode_major(xf86CrtcPtr crtc, DisplayModePtr mode,
 	crtc->rotation = rotation;
 
 	output_ids = calloc(xf86_config->num_output, sizeof *output_ids);
-	if (!output_ids) {
-		ERROR_MSG(
-				"memory allocation failed in drmmode_set_mode_major()");
+	if (!output_ids)
+	{
+		ERROR_MSG( "memory allocation failed in drmmode_set_mode_major()" );
 		ret = FALSE;
 		goto cleanup;
 	}
 
-	for (i = 0; i < xf86_config->num_output; i++) {
+	for (i = 0; i < xf86_config->num_output; ++i)
+	{
 		xf86OutputPtr output = xf86_config->output[i];
 		struct drmmode_output_priv *drmmode_output;
 
@@ -270,8 +271,7 @@ drmmode_set_mode_major(xf86CrtcPtr crtc, DisplayModePtr mode,
 			continue;
 
 		drmmode_output = output->driver_private;
-		output_ids[output_count] =
-				drmmode_output->connector->connector_id;
+		output_ids[output_count] = drmmode_output->connector->connector_id;
 		output_count++;
 	}
 
@@ -576,8 +576,7 @@ drmmode_load_cursor_argb(xf86CrtcPtr crtc, CARD32 *image)
 		drmmode_show_cursor_image(crtc, TRUE);
 }
 
-static Bool
-drmmode_cursor_init_plane(ScreenPtr pScreen)
+static Bool drmmode_cursor_init_plane(ScreenPtr pScreen)
 {
 	ScrnInfoPtr pScrn = xf86ScreenToScrn(pScreen);
 	struct ARMSOCRec *pARMSOC = ARMSOCPTR(pScrn);
@@ -618,8 +617,7 @@ drmmode_cursor_init_plane(ScreenPtr pScreen)
 
 	ovr = drmModeGetPlane(drmmode->fd, plane_resources->planes[0]);
 	if (!ovr) {
-		ERROR_MSG("HW cursor: drmModeGetPlane failed: %s",
-					strerror(errno));
+		ERROR_MSG("HW cursor: drmModeGetPlane failed: %s", strerror(errno));
 		drmModeFreePlaneResources(plane_resources);
 		return FALSE;
 	}

@@ -12,8 +12,8 @@
 #define ETNA_BO_CACHE_MAX_SIZE_PER_BUCKET 1024*1024*128
 
 //#define ETNA_BO_CACHE_PROFILE 1
-//#define ETNA_DEBUG 1
-//#define ETNA_BO_CACHE_DEBUG 1
+#define ETNA_DEBUG 1
+#define ETNA_BO_CACHE_DEBUG 1
 
 #define ETNA_BO_CACHE_PAGE_SIZE 4096
 #define ETNA_BO_CACHE_BUCKETS_COUNT 4096 // all possibles buffers betweek 4k and 16M

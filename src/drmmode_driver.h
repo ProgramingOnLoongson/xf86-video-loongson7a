@@ -1,5 +1,8 @@
 /*
- * Copyright © 2013 ARM Limited.
+ * Copyright © 2020 Loongson Limited.
+ * 
+ * Authors:
+ *    suijingfeng@loognson.com
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),

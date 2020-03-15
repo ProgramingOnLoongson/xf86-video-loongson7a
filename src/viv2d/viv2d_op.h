@@ -169,7 +169,6 @@ static inline int _Viv2DStreamWait(Viv2DPtr v2d) {
 		VIV2D_INFO_MSG("wait pipe failed");
 	}
 	return ret;
-//	VIV2D_DBG_MSG("_Viv2DStreamCommit pipe wait end");
 }
 
 static inline void _Viv2DStreamCommit(Viv2DPtr v2d, Bool async) {
