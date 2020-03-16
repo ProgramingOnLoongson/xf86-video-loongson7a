@@ -42,7 +42,7 @@
 
 #define ARMSOC_EXA_MAP_USERPTR 0
 
-#define ARMSOC_EXA_DEBUG 1
+// #define ARMSOC_EXA_DEBUG 1
 
 Bool IsDumbPixmap(struct ARMSOCPixmapPrivRec *priv, int size)
 {

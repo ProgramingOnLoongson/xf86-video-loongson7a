@@ -246,7 +246,7 @@ static Bool CreateBufferResources(DrawablePtr pDraw, DRI2BufferPtr buffer)
 	bo = ARMSOCPixmapBo(pPixmap);
 	if (!bo) {
 		ERROR_MSG(
-				"Attempting to DRI2 wrap a pixmap with no DRM buffer object backing");
+			"Attempting to DRI2 wrap a pixmap with no DRM buffer object backing");
 		goto fail;
 	}
 
@@ -273,8 +273,7 @@ static Bool CreateBufferResources(DrawablePtr pDraw, DRI2BufferPtr buffer)
 		int ret = armsoc_bo_add_fb(bo);
 	        buf->attempted_fb_alloc = TRUE;
 		if (ret) {
-			WARNING_MSG(
-					"Falling back to blitting a flippable window");
+			WARNING_MSG("Falling back to blitting a flippable window");
 		}
 	}
 
@@ -318,7 +317,7 @@ static void DestroyBufferResources(DrawablePtr pDraw, DRI2BufferPtr buffer)
 	} else
 		numBuffers = 1;
 
-	for (i = 0; i < numBuffers && buf->pPixmaps[i] != NULL; i++) {
+	for (i = 0; i < numBuffers && buf->pPixmaps[i] != NULL; ++i) {
 		ARMSOCDeregisterExternalAccess(buf->pPixmaps[i]);
 		pScreen->DestroyPixmap(buf->pPixmaps[i]);
 	}
@@ -354,8 +353,7 @@ ARMSOCDRI2CreateBuffer(DrawablePtr pDraw, unsigned int attachment,
 	}
 
 	if (attachment == DRI2BufferBackLeft && pARMSOC->driNumBufs > 2) {
-		buf->pPixmaps = calloc(pARMSOC->driNumBufs-1,
-				sizeof(PixmapPtr));
+		buf->pPixmaps = calloc(pARMSOC->driNumBufs-1, sizeof(PixmapPtr));
 		buf->numPixmaps = pARMSOC->driNumBufs-1;
 	} else {
 		buf->pPixmaps = malloc(sizeof(PixmapPtr));

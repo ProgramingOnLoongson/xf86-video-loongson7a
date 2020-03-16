@@ -2,6 +2,7 @@
 
 /*
  * Copyright © 2011 Texas Instruments, Inc
+ * Copyright © 2020 Loongson, Inc
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -25,6 +26,7 @@
  * Authors:
  *    Ian Elliott <ianelliottus@yahoo.com>
  *    Rob Clark <rob@ti.com>
+ *    Sui Jingfeng <suijingfeng@loongson.cn>
  */
 
 #ifndef __ARMSOC_DRV_H__
@@ -40,9 +42,6 @@
 #include <errno.h>
 #include "armsoc_exa.h"
 
-
-/* Name used to prefix messages */
-#define ARMSOC_NAME		"LOONGSON7A"
 
 #define ARMSOC_SUPPORT_GAMMA	0
 

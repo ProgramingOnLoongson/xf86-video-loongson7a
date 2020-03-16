@@ -49,17 +49,18 @@
 
 #include "xf86cmap.h"
 #include "xf86RandR12.h"
-
+//suijingfeng
+#include "xf86Priv.h"
 #include "compat-api.h"
 
 #include "drmmode_driver.h"
 
 /* Driver name as used in config file */
-#define ARMSOC_DRIVER_NAME	"loongson7a"
+#define LOONGSON7A_DRIVER_NAME	"loongson7a"
 /** Supported "chipsets." */
-#define ARMSOC_CHIPSET_NAME "LOONGSON7A1000"
+#define ARMSOC_CHIPSET_NAME "LS7A1000"
 /* Apparently not used by X server */
-#define LOONGSON7A_VERSION		1000
+#define LOONGSON7A_DRIVER_VERSION	1000
 
 
 /* Cursor dimensions
@@ -94,6 +95,231 @@ static Bool ARMSOCEnterVT(VT_FUNC_ARGS_DECL);
 static void ARMSOCLeaveVT(VT_FUNC_ARGS_DECL);
 static void ARMSOCFreeScreen(FREE_SCREEN_ARGS_DECL);
 
+
+#ifdef XSERVER_LIBPCIACCESS
+static const struct pci_id_match loongson7a_device_match[] = {
+    { PCI_MATCH_ANY, PCI_MATCH_ANY, PCI_MATCH_ANY, PCI_MATCH_ANY,
+     0x00030000, 0x00ff0000, 0},
+
+    {0, 0, 0},
+};
+#endif
+
+
+#ifdef XSERVER_LIBPCIACCESS
+static int get_passed_fd(void)
+{
+    if (xf86DRMMasterFd >= 0)
+    {
+        xf86DrvMsg(-1, X_INFO, 
+		"Using passed DRM master file descriptor %d\n", xf86DRMMasterFd);
+        return dup(xf86DRMMasterFd);
+    }
+    return -1;
+}
+
+static int LS_OpenHW(const char *dev)
+{
+    int fd;
+
+    if ((fd = get_passed_fd()) != -1)
+        return fd;
+
+    if (dev)
+        fd = open(dev, O_RDWR | O_CLOEXEC, 0);
+    else {
+        dev = getenv("KMSDEVICE");
+        if ((NULL == dev) || ((fd = open(dev, O_RDWR | O_CLOEXEC, 0)) == -1)) {
+            dev = "/dev/dri/card0";
+            fd = open(dev, O_RDWR | O_CLOEXEC, 0);
+        }
+    }
+    if (fd == -1)
+        xf86DrvMsg(-1, X_ERROR, "open %s: %s\n", dev, strerror(errno));
+
+    return fd;
+}
+
+static char * LS_DRICreatePCIBusID(const struct pci_device *dev)
+{
+    char *busID;
+
+    if (asprintf(&busID, "pci:%04x:%02x:%02x.%d",
+                 dev->domain, dev->bus, dev->dev, dev->func) == -1)
+        return NULL;
+
+    return busID;
+}
+
+static int LS_CheckOutputs(int fd, int *count)
+{
+    drmModeResPtr res = drmModeGetResources(fd);
+    int ret;
+
+    if (!res)
+        return FALSE;
+
+    if (count)
+        *count = res->count_connectors;
+
+    ret = res->count_connectors > 0;
+
+    if (ret == FALSE) {
+        uint64_t value = 0;
+        if (drmGetCap(fd, DRM_CAP_PRIME, &value) == 0 &&
+                (value & DRM_PRIME_CAP_EXPORT))
+            ret = TRUE;
+    }
+
+    drmModeFreeResources(res);
+    return ret;
+}
+
+static Bool probe_hw_pci(const char *dev, struct pci_device *pdev)
+{
+    int ret = FALSE, fd = LS_OpenHW(dev);
+    char *id, *devid;
+    drmSetVersion sv;
+
+    if (fd == -1)
+        return FALSE;
+
+    sv.drm_di_major = 1;
+    sv.drm_di_minor = 4;
+    sv.drm_dd_major = -1;
+    sv.drm_dd_minor = -1;
+    if (drmSetInterfaceVersion(fd, &sv)) {
+        close(fd);
+        return FALSE;
+    }
+
+    id = drmGetBusid(fd);
+    devid = LS_DRICreatePCIBusID(pdev);
+
+    if (id && devid && !strcmp(id, devid))
+        ret = LS_CheckOutputs(fd, NULL);
+
+    close(fd);
+    free(id);
+    free(devid);
+    return ret;
+}
+
+
+static void LS_SetupScrnHooks(ScrnInfoPtr pScrn)
+{
+	pScrn->driverVersion = LOONGSON7A_DRIVER_VERSION;
+	pScrn->driverName    = LOONGSON7A_DRIVER_NAME;
+	pScrn->name          = LOONGSON7A_DRIVER_NAME;
+	pScrn->Probe         = NULL;
+	pScrn->PreInit       = ARMSOCPreInit;
+	pScrn->ScreenInit    = ARMSOCScreenInit;
+	pScrn->SwitchMode    = ARMSOCSwitchMode;
+	pScrn->AdjustFrame   = ARMSOCAdjustFrame;
+	pScrn->EnterVT       = ARMSOCEnterVT;
+	pScrn->LeaveVT       = ARMSOCLeaveVT;
+	pScrn->FreeScreen    = ARMSOCFreeScreen;
+/*
+    scrn->driverVersion = 1;
+    scrn->driverName = "modesetting";
+    scrn->name = "modeset";
+
+    scrn->Probe = NULL;
+    scrn->PreInit = PreInit;
+    scrn->ScreenInit = ScreenInit;
+    scrn->SwitchMode = SwitchMode;
+    scrn->AdjustFrame = AdjustFrame;
+    scrn->EnterVT = EnterVT;
+    scrn->LeaveVT = LeaveVT;
+    scrn->FreeScreen = FreeScreen;
+    scrn->ValidMode = ValidMode;
+*/
+}
+
+int ms_entity_index=-1;
+
+
+/**
+ * Helper functions for sharing a DRM connection across screens.
+ */
+static struct ARMSOCConnection {
+	const char *driver_name;
+	const char *bus_id;
+	unsigned int card_num;
+	int fd;
+	int open_count;
+	int master_count;
+} connection = {NULL, NULL, 0, -1, 0, 0};
+
+
+static void ls_setup_entity(ScrnInfoPtr scrn, int entity_num)
+{
+
+    DevUnion *pPriv;
+
+    xf86SetEntitySharable(entity_num);
+
+    if (ms_entity_index == -1)
+        ms_entity_index = xf86AllocateEntityPrivateIndex();
+
+    pPriv = xf86GetEntityPrivate(entity_num, ms_entity_index);
+
+    xf86SetEntityInstanceForScreen(scrn, entity_num, xf86GetNumEntityInstances(entity_num) - 1);
+
+    if (!pPriv->ptr)
+        pPriv->ptr = xnfcalloc(sizeof(struct ARMSOCConnection), 1);
+}
+
+static Bool loongson7a_pci_probe(DriverPtr driver,
+             int entity_num, struct pci_device *dev, intptr_t match_data)
+{
+    ScrnInfoPtr scrn = NULL;
+
+    scrn = xf86ConfigPciEntity(scrn, 0, entity_num, NULL,  NULL, NULL, NULL, NULL, NULL);
+
+    if (scrn)
+    {
+        const char *devpath;
+        GDevPtr devSection = xf86GetDevFromEntity(scrn->entityList[0],
+                                                  scrn->entityInstanceList[0]);
+
+        devpath = xf86FindOptionValue(devSection->options, "kmsdev");
+        if (probe_hw_pci(devpath, dev))
+	{
+	    // suijingfeng
+            // LS_SetupScrnHooks(scrn);
+
+            xf86DrvMsg(scrn->scrnIndex, X_CONFIG,
+                       "claimed PCI slot %d@%d:%d:%d\n",
+                       dev->bus, dev->domain, dev->dev, dev->func);
+            xf86DrvMsg(scrn->scrnIndex, X_INFO,
+                       "using %s\n", devpath ? devpath : "default device");
+
+            // ls_setup_entity(scrn, entity_num);
+        }
+        else
+            scrn = NULL;
+    }
+    return scrn != NULL;
+}
+#endif
+
+static Bool loongson7a_driver_func(ScrnInfoPtr scrn, xorgDriverFuncOp op, void *data)
+{
+    xorgHWFlags *flag;
+
+    switch (op) {
+    case GET_REQUIRED_HW_INTERFACES:
+        flag = (CARD32 *) data;
+        (*flag) = 0;
+        return TRUE;
+    case SUPPORTS_SERVER_FDS:
+        return TRUE;
+    default:
+        return FALSE;
+    }
+}
+
 /**
  * A structure used by the XFree86 code when loading this driver, so that it
  * can access the Probe() function, and other functions/info that it uses
@@ -101,16 +327,17 @@ static void ARMSOCFreeScreen(FREE_SCREEN_ARGS_DECL);
  * the all-upper-case version of the driver name.
  */
 _X_EXPORT DriverRec Loongson7a = {
-	LOONGSON7A_VERSION,
-	ARMSOC_DRIVER_NAME,
+	LOONGSON7A_DRIVER_VERSION,
+	LOONGSON7A_DRIVER_NAME,
 	Identify,
 	Probe,
 	AvailableOptions,
 	NULL,
 	0,
-	NULL,
+	loongson7a_driver_func,
 #ifdef XSERVER_LIBPCIACCESS
-	NULL,
+	loongson7a_device_match,
+	NULL, /* loongson7a_pci_probe, */
 	NULL
 #endif
 };
@@ -122,6 +349,7 @@ enum {
 	OPTION_DEBUG,
 	OPTION_NO_FLIP,
 	OPTION_CARD_NUM,
+	OPTION_DEV_PATH,
 	OPTION_BUSID,
 	OPTION_DRIVERNAME,
 	OPTION_DRI_NUM_BUF,
@@ -134,6 +362,7 @@ static const OptionInfoRec Options[] = {
 	{ OPTION_DEBUG,      "Debug",      OPTV_BOOLEAN, {0}, FALSE },
 	{ OPTION_NO_FLIP,    "NoFlip",     OPTV_BOOLEAN, {0}, FALSE },
 	{ OPTION_CARD_NUM,   "DRICard",    OPTV_INTEGER, {0}, FALSE },
+	{ OPTION_DEV_PATH,   "kmsdev",     OPTV_STRING, {0}, FALSE },
 	{ OPTION_BUSID,      "BusID",      OPTV_STRING,  {0}, FALSE },
 	{ OPTION_DRIVERNAME, "DriverName", OPTV_STRING,  {0}, FALSE },
 	{ OPTION_DRI_NUM_BUF, "DRI2MaxBuffers", OPTV_INTEGER, { -1}, FALSE },
@@ -193,22 +422,6 @@ static struct drmmode_interface loongson7a_interface = {
 	.vblank_query_supported = 0,
 };
 
-
-static struct drmmode_interface *interfaces[] = {
-	&loongson7a_interface
-};
-
-/**
- * Helper functions for sharing a DRM connection across screens.
- */
-static struct ARMSOCConnection {
-	const char *driver_name;
-	const char *bus_id;
-	unsigned int card_num;
-	int fd;
-	int open_count;
-	int master_count;
-} connection = {NULL, NULL, 0, -1, 0, 0};
 
 static int ARMSOCSetDRMMaster(void)
 {
@@ -271,35 +484,6 @@ static void ShowDriverInfo(int fd)
 	}
 }
 
-int ARMSOCDetectDevice(const char *name)
-{
-	drmVersionPtr version;
-	char buf[64];
-	int fd, rc;
-	unsigned int minor;
-	for (minor = 0; minor < 64; ++minor)
-	{
-		snprintf(buf, sizeof(buf), "%s/card%d", DRM_DIR_NAME, minor);
-
-		fd = open(buf, O_RDWR);
-		if (fd == -1)
-			continue;
-
-		version = drmGetVersion(fd);
-		if (version) {
-			rc = strcmp(version->name, name);
-			drmFreeVersion(version);
-
-			if (rc == 0) {
-				EARLY_INFO_MSG(" %s found at %s", name, buf);
-				return fd;
-			}
-		}
-		close(fd);
-	}
-
-	return -1;
-}
 
 static int OpenDRMCard(void)
 {
@@ -309,10 +493,8 @@ static int OpenDRMCard(void)
 	{
 		/* user specified bus ID or driver name - pass to drmOpen */
 		EARLY_INFO_MSG("Opening driver [%s], bus_id [%s]",
-		               connection.driver_name ?
-		               connection.driver_name : "NULL",
-		               connection.bus_id ?
-		               connection.bus_id : "NULL");
+		               connection.driver_name ? connection.driver_name : "NULL",
+		               connection.bus_id ? connection.bus_id : "NULL");
 		fd = drmOpen(connection.driver_name, connection.bus_id);
 		if (fd < 0)
 			goto fail2;
@@ -330,22 +512,11 @@ static int OpenDRMCard(void)
 			snprintf(filename, sizeof(filename), "/dev/dri/card%d", card_num);
 			EARLY_INFO_MSG(
 			    "No BusID or DriverName specified - opening %s", filename);
-			fd = open(filename, O_RDWR, 0);
+			fd = open(filename, O_RDWR | O_CLOEXEC, 0);
 		}
 		else
-		{
-			unsigned int i;
-			for (int i = 0; i < ARRAY_SIZE(interfaces); i++)
-			{
-				struct drmmode_interface *iface = interfaces[i];
-				fd = ARMSOCDetectDevice(iface->driver_name);
-				if (fd != -1) {
-					EARLY_INFO_MSG(
-					    "No card num specified - %s found",
-					    iface->driver_name);
-					break;
-				}
-			}
+		{				
+			fd = drmOpen(loongson7a_interface.driver_name, NULL);
 		}
 
 		if (-1 == fd)
@@ -409,7 +580,8 @@ static Bool ARMSOCOpenDRM(ScrnInfoPtr pScrn)
 	drmSetVersion sv;
 	int err;
 
-	if (connection.fd < 0) {
+	if (connection.fd < 0)
+	{
 		assert(!connection.open_count);
 		assert(!connection.master_count);
 		pARMSOC->drmFD = OpenDRMCard();
@@ -434,7 +606,9 @@ static Bool ARMSOCOpenDRM(ScrnInfoPtr pScrn)
 		connection.fd = pARMSOC->drmFD;
 		connection.open_count = 1;
 		connection.master_count = 1;
-	} else {
+	}
+	else
+	{
 		assert(connection.open_count);
 		connection.open_count++;
 		connection.master_count++;
@@ -608,7 +782,7 @@ static MODULESETUPPROTO(Setup);
 
 /** Provide basic version information to the XFree86 code. */
 static XF86ModuleVersionInfo VersRec = {
-	ARMSOC_DRIVER_NAME,
+	LOONGSON7A_DRIVER_NAME,
 	MODULEVENDORSTRING,
 	MODINFOSTRING1,
 	MODINFOSTRING2,
@@ -663,17 +837,25 @@ static const OptionInfoRec * AvailableOptions(int chipid, int busid)
 }
 
 /**
- * The mandatory Identify() function.  It is run before Probe(), and prints out
- * an identifying message.
+ * The mandatory Identify() function.  It is run before Probe(), 
+ * and prints out an identifying message.
  */
+
+static SymTabRec Chipsets[] = {
+    {0, "LS7A1000"},
+    {1, "LS7A2000"},
+    {-1, NULL}
+};
+
 static void Identify(int flags)
 {
-	xf86Msg(X_INFO, "%s: Driver for LOONGSON7A compatible chipsets\n", ARMSOC_NAME);
+	xf86PrintChipsets(LOONGSON7A_DRIVER_NAME, "Device Dependent X Driver for",
+                      Chipsets);
 }
 
 /**
  * The driver's Probe() function.  This function finds all instances of
- * ARM hardware that the driver supports (from within the "xorg.conf"
+ * loongson7aXXXX hardware that the driver supports (from within the "xorg.conf"
  * device sections), and for instances not already claimed by another driver,
  * claim the instances, and allocate a ScrnInfoRec.  Only minimal hardware
  * probing is allowed here.
@@ -689,7 +871,7 @@ static Bool Probe(DriverPtr drv, int flags)
 	/* Get the "xorg.conf" file device sections that match this driver, and
 	 * return (error out) if there are none:
 	 */
-	numDevSections = xf86MatchDevice(ARMSOC_DRIVER_NAME, &devSections);
+	numDevSections = xf86MatchDevice(LOONGSON7A_DRIVER_NAME, &devSections);
 	if (numDevSections <= 0)
 	{
 		EARLY_ERROR_MSG(
@@ -711,7 +893,8 @@ static Bool Probe(DriverPtr drv, int flags)
 	{
 		int fd;
 
-		if (devSections) {
+		if (devSections)
+		{
 			const char *busIdStr;
 			const char *driverNameStr;
 			const char *cardNumStr;
@@ -794,7 +977,7 @@ static Bool Probe(DriverPtr drv, int flags)
 				 * so call xf86AddBusDeviceToConfigure()
 				 * directly
 				 */
-				xf86AddBusDeviceToConfigure(ARMSOC_DRIVER_NAME,
+				xf86AddBusDeviceToConfigure(LOONGSON7A_DRIVER_NAME,
 				                            BUS_NONE, NULL, i);
 				foundScreen = TRUE;
 				drmClose(fd);
@@ -802,8 +985,7 @@ static Bool Probe(DriverPtr drv, int flags)
 			}
 
 			if (devSections) {
-				int entity = xf86ClaimNoSlot(drv, 0,
-				                             devSections[i], TRUE);
+				int entity = xf86ClaimNoSlot(drv, 0, devSections[i], TRUE);
 				xf86AddEntityToScreen(pScrn, entity);
 			}
 
@@ -818,17 +1000,8 @@ static Bool Probe(DriverPtr drv, int flags)
 
 			foundScreen = TRUE;
 
-			pScrn->driverVersion = LOONGSON7A_VERSION;
-			pScrn->driverName    = (char *)ARMSOC_DRIVER_NAME;
-			pScrn->name          = (char *)ARMSOC_NAME;
-			pScrn->Probe         = Probe;
-			pScrn->PreInit       = ARMSOCPreInit;
-			pScrn->ScreenInit    = ARMSOCScreenInit;
-			pScrn->SwitchMode    = ARMSOCSwitchMode;
-			pScrn->AdjustFrame   = ARMSOCAdjustFrame;
-			pScrn->EnterVT       = ARMSOCEnterVT;
-			pScrn->LeaveVT       = ARMSOCLeaveVT;
-			pScrn->FreeScreen    = ARMSOCFreeScreen;
+			LS_SetupScrnHooks(pScrn);
+
 
 			/* would be nice to keep the connection open */
 			drmClose(fd);
@@ -839,32 +1012,6 @@ free_sections:
 
 out:
 	return foundScreen;
-}
-
-/**
- * Find a drmmode driver with the same name as the underlying drm kernel driver
-*/
-static struct drmmode_interface *get_drmmode_implementation(int drm_fd)
-{
-	drmVersionPtr version;
-	struct drmmode_interface *ret = NULL;
-	unsigned int i;
-
-	version = drmGetVersion(drm_fd);
-	if (!version)
-		return NULL;
-
-	for (i = 0; i < ARRAY_SIZE(interfaces); ++i)
-	{
-		struct drmmode_interface *iface = interfaces[i];
-		if (strcmp(version->name, iface->driver_name) == 0) {
-			ret = iface;
-			break;
-		}
-	}
-
-	drmFreeVersion(version);
-	return ret;
 }
 
 
@@ -887,7 +1034,7 @@ static Bool ARMSOCPreInit(ScrnInfoPtr pScrn, int flags)
 	if (flags & PROBE_DETECT) {
 		ERROR_MSG(
 		    "The %s driver does not support the \"-configure\" or \"-probe\" command line arguments.",
-		    ARMSOC_NAME);
+		    LOONGSON7A_DRIVER_NAME);
 		return FALSE;
 	}
 
@@ -948,13 +1095,12 @@ static Bool ARMSOCPreInit(ScrnInfoPtr pScrn, int flags)
 	/* Using a programmable clock: */
 	pScrn->progClock = TRUE;
 
-	/* Open a connection to the DRM, so we can communicate
-	 * with the KMS code:
+	/* Open a connection to the DRM, so we can communicate with the KMS code:
 	 */
 	if (!ARMSOCOpenDRM(pScrn))
 		goto fail;
 
-	pARMSOC->drmmode_interface = get_drmmode_implementation(pARMSOC->drmFD);
+	pARMSOC->drmmode_interface = &loongson7a_interface;
 	if (!pARMSOC->drmmode_interface)
 		goto fail2;
 
