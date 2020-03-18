@@ -527,8 +527,8 @@ ARMSOCVideoSetupTexturedVideo(ScreenPtr pScreen)
 	for (i = 0; i < NUM_TEXTURE_PORTS; i++)
 		adapt->pPortPrivates[i].ptr = (pointer)(pPriv);
 
-	adapt->nAttributes		= ARRAY_SIZE(ARMSOCVideoTexturedAttributes);
-	adapt->pAttributes		= ARMSOCVideoTexturedAttributes;
+	adapt->nAttributes = ARRAY_SIZE(ARMSOCVideoTexturedAttributes);
+	adapt->pAttributes = ARMSOCVideoTexturedAttributes;
 
 	nformats = pARMSOC->pARMSOCEXA->GetFormats(formats);
 	nsupported = 0;
@@ -567,9 +567,9 @@ ARMSOCVideoSetupTexturedVideo(ScreenPtr pScreen)
 	adapt->GetVideo			= NULL;
 	adapt->GetStill			= NULL;
 	adapt->StopVideo		= ARMSOCVideoStopVideo;
-	adapt->SetPortAttribute	= ARMSOCVideoSetPortAttribute;
-	adapt->GetPortAttribute	= ARMSOCVideoGetPortAttribute;
-	adapt->QueryBestSize	= ARMSOCVideoQueryBestSize;
+	adapt->SetPortAttribute		= ARMSOCVideoSetPortAttribute;
+	adapt->GetPortAttribute		= ARMSOCVideoGetPortAttribute;
+	adapt->QueryBestSize		= ARMSOCVideoQueryBestSize;
 	adapt->PutImage			= ARMSOCVideoPutImage;
 	adapt->QueryImageAttributes	= ARMSOCVideoQueryImageAttributes;
 
@@ -584,8 +584,7 @@ ARMSOCVideoSetupTexturedVideo(ScreenPtr pScreen)
  * do that).  So for optimal path from hw decoders to display, dri2video
  * should be used.  But this at least helps out legacy apps.
  */
-Bool
-ARMSOCVideoScreenInit(ScreenPtr pScreen)
+Bool ARMSOCVideoScreenInit(ScreenPtr pScreen)
 {
 	ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum];
 	struct ARMSOCRec * pARMSOC = ARMSOCPTR(pScrn);

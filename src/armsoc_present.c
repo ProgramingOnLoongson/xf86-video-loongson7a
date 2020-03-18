@@ -565,15 +565,13 @@ armsoc_present_flip_abort(struct ARMSOCRec * pARMSOC, void *data)
 /*
  * Test to see if page flipping is possible on the target crtc
  */
-static Bool
-armsoc_present_check_flip(RRCrtcPtr crtc,
+static Bool armsoc_present_check_flip(RRCrtcPtr crtc,
                           WindowPtr window,
                           PixmapPtr pixmap,
                           Bool sync_flip)
 {
 	ScreenPtr screen = window->drawable.pScreen;
 	ScrnInfoPtr scrn = xf86ScreenToScrn(screen);
-//    modesettingPtr ms = modesettingPTR(scrn);
 	struct ARMSOCRec * pARMSOC = ARMSOCPTR(scrn);
 	xf86CrtcConfigPtr config = XF86_CRTC_CONFIG_PTR(scrn);
 	int num_crtcs_on = 0;
@@ -598,11 +596,6 @@ armsoc_present_check_flip(RRCrtcPtr crtc,
 	/*	if (pixmap->devKind != drmmode_bo_get_pitch(&ms->drmmode.front_bo))
 			return FALSE;
 	*/
-	/* Make sure there's a bo we can get to */
-	/* XXX: actually do this.  also...is it sufficient?
-	 * if (!glamor_get_pixmap_private(pixmap))
-	 *     return FALSE;
-	 */
 
 	return TRUE;
 }
@@ -625,7 +618,7 @@ armsoc_present_flip(RRCrtcPtr crtc,
 	struct drmmode_crtc_private_rec * drmmode_crtc = xf86_crtc->driver_private;
 	Bool ret;
 	struct armsoc_present_vblank_event *event;
-	ARMSOC_PRESENT_DBG_MSG("armsoc_present_flip");
+	ARMSOC_PRESENT_DBG_MSG("present_flip");
 
 	if (!armsoc_present_check_flip(crtc, screen->root, pixmap, sync_flip))
 		return FALSE;
@@ -727,8 +720,7 @@ static present_screen_info_rec armsoc_present_screen_info = {
  * General DRM kernel handler. Looks for the matching sequence number in the
  * drm event queue and calls the handler for it.
  */
-static void
-armsoc_drm_handler(int fd, uint32_t frame, uint32_t sec, uint32_t usec,
+static void armsoc_drm_handler(int fd, uint32_t frame, uint32_t sec, uint32_t usec,
                    void *user_ptr)
 {
 	struct armsoc_drm_queue *q, *tmp;

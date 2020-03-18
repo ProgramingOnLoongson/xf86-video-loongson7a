@@ -1043,12 +1043,16 @@ Bool ARMSOCDRI2ScreenInit(ScreenPtr pScreen)
 	}
 
 	ret = drmWaitVBlank(pARMSOC->drmFD, &vbl);
+
+	if(ret == 0)
+		xf86DrvMsg(pScrn->scrnIndex, X_INFO, "DRI2 vblank query supported!\n");
+
 	if (ret)
 		pARMSOC->drmmode_interface->vblank_query_supported = 0;
 	else
 		pARMSOC->drmmode_interface->vblank_query_supported = 1;
 
-	xf86DrvMsg(pScrn->scrnIndex, X_INFO, " DRI2 initialzed. \n");
+	xf86DrvMsg(pScrn->scrnIndex, X_INFO, " DRI2 initialzed. \n ");
 
 	return DRI2ScreenInit(pScreen, &info);
 }

@@ -564,8 +564,10 @@ _X_EXPORT Bool ARMSOCPrepareAccess(PixmapPtr pPixmap, int index)
 
 	/* Attach dmabuf fd to bo to synchronise access if pixmap wrapped by DRI2
 	 */
-	if (priv->ext_access_cnt && !armsoc_bo_has_dmabuf(priv->bo)) {
-		if (armsoc_bo_set_dmabuf(priv->bo)) {
+	if (priv->ext_access_cnt && !armsoc_bo_has_dmabuf(priv->bo))
+	{
+		if (armsoc_bo_set_dmabuf(priv->bo))
+		{
 			xf86DrvMsg(-1, X_ERROR,
 			           "%s: Unable to get dma_buf fd for bo, to enable synchronised CPU access.\n",
 			           __func__);

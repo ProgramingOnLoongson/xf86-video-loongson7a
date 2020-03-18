@@ -1269,7 +1269,7 @@ static Bool ARMSOCScreenInit(SCREEN_INIT_ARGS_DECL)
 
 	/* set drm master before allocating scanout buffer */
 	if (ARMSOCSetDRMMaster()) {
-		ERROR_MSG("Cannot get DRM master: %s", strerror(errno));
+		ERROR_MSG("Cannot Set DRM master: %s", strerror(errno));
 		goto fail;
 	}
 
@@ -1399,7 +1399,7 @@ static Bool ARMSOCScreenInit(SCREEN_INIT_ARGS_DECL)
 	}
 
 	/* ignore failures here as we will fall back to software cursor */
-	if( ! drmmode_cursor_init(pScreen) )
+	if( !drmmode_cursor_init(pScreen) )
 	{
 		xf86DrvMsg(pScrn->scrnIndex, X_INFO, " Software cursor initialized.\n");
 	}
@@ -1529,7 +1529,7 @@ ARMSOCCloseScreen(CLOSE_SCREEN_ARGS_DECL)
 	 * we do it here, before calling the CloseScreen chain which would just free pScreen->devPrivate in fbCloseScreen()
 	 */
 	if (pScreen->devPrivate) {
-		// NOT: this make X segfault 
+		// NOT: this make X segfault
 		// Xorg: ../../../../include/privates.h:122: dixGetPrivateAddr: Assertion `key->initialized' failed.
 //		(void) (*pScreen->DestroyPixmap)(pScreen->devPrivate);
 //		pScreen->devPrivate = NULL;
@@ -1586,8 +1586,7 @@ ARMSOCCreateScreenResources(ScreenPtr pScreen)
 }
 
 
-static void
-ARMSOCBlockHandler(BLOCKHANDLER_ARGS_DECL)
+static void ARMSOCBlockHandler(BLOCKHANDLER_ARGS_DECL)
 {
 	SCREEN_PTR(arg);
 	ScrnInfoPtr pScrn = xf86ScreenToScrn(pScreen);
@@ -1610,8 +1609,7 @@ ARMSOCBlockHandler(BLOCKHANDLER_ARGS_DECL)
  * The driver's SwitchMode() function.  Initialize the new mode for the
  * Screen.
  */
-static Bool
-ARMSOCSwitchMode(SWITCH_MODE_ARGS_DECL)
+static Bool ARMSOCSwitchMode(SWITCH_MODE_ARGS_DECL)
 {
 	SCRN_INFO_PTR(arg);
 	return xf86SetSingleMode(pScrn, mode, RR_Rotate_0);
@@ -1624,8 +1622,7 @@ ARMSOCSwitchMode(SWITCH_MODE_ARGS_DECL)
  * larger than the monitor resolution, this function can pan around the frame
  * buffer within the "viewport" of the monitor.
  */
-static void
-ARMSOCAdjustFrame(ADJUST_FRAME_ARGS_DECL)
+static void ARMSOCAdjustFrame(ADJUST_FRAME_ARGS_DECL)
 {
 	SCRN_INFO_PTR(arg);
 	drmmode_adjust_frame(pScrn, x, y);
@@ -1634,15 +1631,13 @@ ARMSOCAdjustFrame(ADJUST_FRAME_ARGS_DECL)
 
 
 /**
- * The driver's EnterVT() function.  This is called at server startup time, and
- * when the X server takes over the virtual terminal from the console.  As
- * such, it may need to save the current (i.e. console) HW state, and set the
- * HW state as needed by the X server.
+ * The driver's EnterVT() function.  This is called at server startup time,
+ * and when the X server takes over the virtual terminal from the console.
+ * As such, it may need to save the current (i.e. console) HW state,
+ * and set the HW state as needed by the X server.
  */
-static Bool
-ARMSOCEnterVT(VT_FUNC_ARGS_DECL)
+static Bool ARMSOCEnterVT(ScrnInfoPtr pScrn)
 {
-	SCRN_INFO_PTR(arg);
 	int i, ret;
 
 	TRACE_ENTER();
