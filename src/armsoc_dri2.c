@@ -1010,10 +1010,11 @@ Bool ARMSOCDRI2ScreenInit(ScreenPtr pScreen)
 {
 	ScrnInfoPtr pScrn = xf86ScreenToScrn(pScreen);
 	struct ARMSOCRec *pARMSOC = ARMSOCPTR(pScrn);
-	drmVBlank vbl = { .request = {
+	drmVBlank vbl = { 
+		.request = {
 		.type = DRM_VBLANK_RELATIVE,
-		.sequence = 0,
-	} };
+		.sequence = 0,}
+	};
 	int ret;
 
 	DRI2InfoRec info = {
@@ -1046,6 +1047,8 @@ Bool ARMSOCDRI2ScreenInit(ScreenPtr pScreen)
 		pARMSOC->drmmode_interface->vblank_query_supported = 0;
 	else
 		pARMSOC->drmmode_interface->vblank_query_supported = 1;
+
+	xf86DrvMsg(pScrn->scrnIndex, X_INFO, " DRI2 initialzed. \n");
 
 	return DRI2ScreenInit(pScreen, &info);
 }

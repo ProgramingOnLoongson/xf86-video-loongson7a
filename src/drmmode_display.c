@@ -576,6 +576,7 @@ drmmode_load_cursor_argb(xf86CrtcPtr crtc, CARD32 *image)
 		drmmode_show_cursor_image(crtc, TRUE);
 }
 
+
 static Bool drmmode_cursor_init_plane(ScreenPtr pScreen)
 {
 	ScrnInfoPtr pScrn = xf86ScreenToScrn(pScreen);
@@ -673,7 +674,8 @@ static Bool drmmode_cursor_init_plane(ScreenPtr pScreen)
 		return FALSE;
 	}
 
-	if (!xf86_cursors_init(pScreen, w, h, HARDWARE_CURSOR_ARGB)) {
+	if (!xf86_cursors_init(pScreen, w, h, HARDWARE_CURSOR_ARGB))
+	{
 		ERROR_MSG("xf86_cursors_init() failed");
 		if (drmModeRmFB(drmmode->fd, cursor->fb_id))
 			ERROR_MSG("drmModeRmFB() failed");
@@ -691,8 +693,7 @@ static Bool drmmode_cursor_init_plane(ScreenPtr pScreen)
 	return TRUE;
 }
 
-static Bool
-drmmode_cursor_init_standard(ScreenPtr pScreen)
+static Bool drmmode_cursor_init_standard(ScreenPtr pScreen)
 {
 	ScrnInfoPtr pScrn = xf86ScreenToScrn(pScreen);
 	struct ARMSOCRec *pARMSOC = ARMSOCPTR(pScrn);
@@ -706,9 +707,9 @@ drmmode_cursor_init_standard(ScreenPtr pScreen)
 	}
 
 	if (!xf86LoaderCheckSymbol("drmModeSetCursor") ||
-	    !xf86LoaderCheckSymbol("drmModeMoveCursor")) {
-		ERROR_MSG(
-				"Standard HW cursor not supported (needs libdrm 2.4.3 or higher)");
+	    !xf86LoaderCheckSymbol("drmModeMoveCursor"))
+	{
+		ERROR_MSG( "Standard HW cursor needs libdrm 2.4.3 or higher)");
 		return FALSE;
 	}
 
@@ -724,8 +725,7 @@ drmmode_cursor_init_standard(ScreenPtr pScreen)
 
 	/* allow for cursor padding in the bo */
 	cursor->bo  = armsoc_bo_new_with_dim(pARMSOC->dev,
-				w + 2 * pad, h,
-				0, 32, ARMSOC_BO_SCANOUT);
+		w + 2 * pad, h, 0, 32, ARMSOC_BO_SCANOUT);
 
 	if (!cursor->bo) {
 		ERROR_MSG("HW cursor (standard): buffer allocation failed");
@@ -755,9 +755,8 @@ Bool drmmode_cursor_init(ScreenPtr pScreen)
 	ScrnInfoPtr pScrn = xf86ScreenToScrn(pScreen);
 	struct ARMSOCRec *pARMSOC = ARMSOCPTR(pScrn);
 
-	INFO_MSG("HW cursor init()");
-
-	switch (pARMSOC->drmmode_interface->cursor_api) {
+	switch (pARMSOC->drmmode_interface->cursor_api)
+	{
 	case HWCURSOR_API_PLANE:
 		return drmmode_cursor_init_plane(pScreen);
 	case HWCURSOR_API_STANDARD:
@@ -848,8 +847,7 @@ static void drmmode_crtc_init(ScrnInfoPtr pScrn, struct drmmode_rec *drmmode, in
 	drmmode_crtc->last_good_mode = NULL;
 	drmmode_crtc->vblank_pipe = drmmode_crtc_vblank_pipe(num);
 
-	INFO_MSG("Got CRTC: %d (id: %d)",
-			num, drmmode_crtc->crtc_id);
+	INFO_MSG("Got CRTC: %d (id: %d)", num, drmmode_crtc->crtc_id);
 	crtc->driver_private = drmmode_crtc;
 
 	TRACE_EXIT();

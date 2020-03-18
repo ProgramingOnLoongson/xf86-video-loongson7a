@@ -233,10 +233,8 @@ _X_EXPORT void ARMSOCDestroyPixmap(ScreenPtr pScreen, void *driverPriv)
 	free(priv);
 }
 
-static Bool ModifyExaPixmapHeader(
-		struct ARMSOCPixmapPrivRec *priv, PixmapPtr pPixmap,
-	       	int width, int height, int depth, int bitsPerPixel,
-		int devKind, pointer pPixData)
+static Bool ModifyExaPixmapHeader(struct ARMSOCPixmapPrivRec *priv, PixmapPtr pPixmap,
+	int width, int height, int depth, int bitsPerPixel, int devKind, pointer pPixData)
 {
 	ScrnInfoPtr pScrn = pix2scrn(pPixmap);
 	struct ARMSOCRec *pARMSOC = ARMSOCPTR(pScrn);
@@ -302,9 +300,10 @@ static Bool ModifyExaPixmapHeader(
 		 * the picture.
 		 */
 #ifdef ARMSOC_EXA_MAP_USERPTR
-	if (pPixData) {
+	if (pPixData)
+	{
 #ifdef ARMSOC_EXA_DEBUG
-		INFO_MSG("ModifyExaPixmapHeader %p pPixData(%p) != priv->buf.buf(%p) %dx%d %d %d/%d", pPixmap, pPixData, priv->buf.buf, width, height, devKind, bitsPerPixel, depth);
+		INFO_MSG("Modify Pixmap Header %p pPixData(%p) != priv->buf.buf(%p) %dx%d %d %d/%d", pPixmap, pPixData, priv->buf.buf, width, height, devKind, bitsPerPixel, depth);
 #endif
 		if (pPixData != priv->buf.buf || priv->buf.size != size) {
 			if (priv->buf.buf && pARMSOC->pARMSOCEXA->UnmapUsermemBuf) {
@@ -336,8 +335,9 @@ static Bool ModifyExaPixmapHeader(
 //		INFO_MSG("AllocBuf modify %p",&priv->buf);
 		pARMSOC->pARMSOCEXA->AllocBuf(pARMSOC->pARMSOCEXA, pPixmap->drawable.width, pPixmap->drawable.height, pPixmap->drawable.depth, pPixmap->drawable.bitsPerPixel, 0, &priv->buf);
 
-		if (!priv->buf.buf) {
-			INFO_MSG("ModifyExaPixmapHeader failed to allocate buffer");
+		if (!priv->buf.buf)
+		{
+			INFO_MSG("Modify Pixmap Header failed to allocate buffer");
 			ERROR_MSG("failed to allocate %d bytes mem", size);
 			priv->buf.size = 0;
 			priv->buf.pitch = 0;
@@ -503,52 +503,51 @@ static inline enum armsoc_gem_op idx2op(int index)
 {
 	switch (index) {
 	case EXA_PREPARE_SRC:
-			case EXA_PREPARE_MASK:
-				case EXA_PREPARE_AUX_SRC:
-					case EXA_PREPARE_AUX_MASK:
-							return ARMSOC_GEM_READ;
-		case EXA_PREPARE_AUX_DEST:
-		case EXA_PREPARE_DEST:
-		default:
-			return ARMSOC_GEM_READ_WRITE;
-		}
+	case EXA_PREPARE_MASK:
+	case EXA_PREPARE_AUX_SRC:
+	case EXA_PREPARE_AUX_MASK:
+		return ARMSOC_GEM_READ;
+	case EXA_PREPARE_AUX_DEST:
+	case EXA_PREPARE_DEST:
+	default:
+		return ARMSOC_GEM_READ_WRITE;
 	}
+}
 
-	/**
-	 * PrepareAccess() is called before CPU access to an offscreen pixmap.
-	 *
-	 * @param pPix the pixmap being accessed
-	 * @param index the index of the pixmap being accessed.
-	 *
-	 * PrepareAccess() will be called before CPU access to an offscreen pixmap.
-	 * This can be used to set up hardware surfaces for byteswapping or
-	 * untiling, or to adjust the pixmap's devPrivate.ptr for the purpose of
-	 * making CPU access use a different aperture.
-	 *
-	 * The index is one of #EXA_PREPARE_DEST, #EXA_PREPARE_SRC,
-	 * #EXA_PREPARE_MASK, #EXA_PREPARE_AUX_DEST, #EXA_PREPARE_AUX_SRC, or
-	 * #EXA_PREPARE_AUX_MASK. Since only up to #EXA_NUM_PREPARE_INDICES pixmaps
-	 * will have PrepareAccess() called on them per operation, drivers can have
-	 * a small, statically-allocated space to maintain state for PrepareAccess()
-	 * and FinishAccess() in.  Note that PrepareAccess() is only called once per
-	 * pixmap and operation, regardless of whether the pixmap is used as a
-	 * destination and/or source, and the index may not reflect the usage.
-	 *
-	 * PrepareAccess() may fail.  An example might be the case of hardware that
-	 * can set up 1 or 2 surfaces for CPU access, but not 3.  If PrepareAccess()
-	 * fails, EXA will migrate the pixmap to system memory.
-	 * DownloadFromScreen() must be implemented and must not fail if a driver
-	 * wishes to fail in PrepareAccess().  PrepareAccess() must not fail when
-	 * pPix is the visible screen, because the visible screen can not be
-	 * migrated.
-	 *
-	 * @return TRUE if PrepareAccess() successfully prepared the pixmap for CPU
-	 * drawing.
-	 * @return FALSE if PrepareAccess() is unsuccessful and EXA should use
-	 * DownloadFromScreen() to migate the pixmap out.
-	 */
-	_X_EXPORT Bool
-	ARMSOCPrepareAccess(PixmapPtr pPixmap, int index)
+/**
+ * PrepareAccess() is called before CPU access to an offscreen pixmap.
+ *
+ * @param pPix the pixmap being accessed
+ * @param index the index of the pixmap being accessed.
+ *
+ * PrepareAccess() will be called before CPU access to an offscreen pixmap.
+ * This can be used to set up hardware surfaces for byteswapping or
+ * untiling, or to adjust the pixmap's devPrivate.ptr for the purpose of
+ * making CPU access use a different aperture.
+ *
+ * The index is one of #EXA_PREPARE_DEST, #EXA_PREPARE_SRC,
+ * #EXA_PREPARE_MASK, #EXA_PREPARE_AUX_DEST, #EXA_PREPARE_AUX_SRC, or
+ * #EXA_PREPARE_AUX_MASK. Since only up to #EXA_NUM_PREPARE_INDICES pixmaps
+ * will have PrepareAccess() called on them per operation, drivers can have
+ * a small, statically-allocated space to maintain state for PrepareAccess()
+ * and FinishAccess() in.  Note that PrepareAccess() is only called once per
+ * pixmap and operation, regardless of whether the pixmap is used as a
+ * destination and/or source, and the index may not reflect the usage.
+ *
+ * PrepareAccess() may fail.  An example might be the case of hardware that
+ * can set up 1 or 2 surfaces for CPU access, but not 3.  If PrepareAccess()
+ * fails, EXA will migrate the pixmap to system memory.
+ * DownloadFromScreen() must be implemented and must not fail if a driver
+ * wishes to fail in PrepareAccess().  PrepareAccess() must not fail when
+ * pPix is the visible screen, because the visible screen can not be
+ * migrated.
+ *
+ * @return TRUE if PrepareAccess() successfully prepared the pixmap for CPU
+ * drawing.
+ * @return FALSE if PrepareAccess() is unsuccessful and EXA should use
+ * DownloadFromScreen() to migate the pixmap out.
+ */
+_X_EXPORT Bool ARMSOCPrepareAccess(PixmapPtr pPixmap, int index)
 {
 	struct ARMSOCPixmapPrivRec *priv = exaGetPixmapDriverPrivate(pPixmap);
 

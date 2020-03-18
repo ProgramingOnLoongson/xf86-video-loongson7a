@@ -123,7 +123,7 @@ struct ARMSOCRec {
 	 * Pointer to a structure used to communicate and coordinate with an
 	 * external EXA library (if loaded).
 	 */
-	struct ARMSOCEXARec	*pARMSOCEXA;
+	struct ARMSOCEXARec * pARMSOCEXA;
 
 	/** record if ARMSOCDRI2ScreenInit() was successful */
 	Bool				dri2;
@@ -132,7 +132,7 @@ struct ARMSOCRec {
 	/** user-configurable option: */
 	Bool				NoFlip;
 	Bool 				SoftExa;
-	unsigned			driNumBufs;
+	unsigned int			driNumBufs;
 
 	/** File descriptor of the connection with the DRM. */
 	int					drmFD;
@@ -255,7 +255,7 @@ Bool ARMSOCVideoScreenInit(ScreenPtr pScreen);
 void ARMSOCVideoCloseScreen(ScreenPtr pScreen);
 
 // Present
-Bool armsoc_present_screen_init(ScreenPtr screen);
+Bool LS7A_PresentScreenInit(ScreenPtr screen);
 
 // DRI3
 Bool ARMSOCDRI3ScreenInit(ScreenPtr pScreen);

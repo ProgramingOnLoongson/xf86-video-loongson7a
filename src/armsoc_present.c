@@ -47,7 +47,7 @@
 #include "drmmode_display.h"
 
 #define ARMSOC_PRESENT_FLIP 1
-#define ARMSOC_PRESENT_WAIT_VBLANK 1
+#define LOONGSON_PRESENT_WAIT_VBLANK 1
 
 #define ARMSOC_PRESENT_DBG_MSG(fmt, ...)
 /*#define ARMSOC_PRESENT_DBG_MSG(fmt, ...) \
@@ -116,8 +116,7 @@ static int armsoc_box_area(BoxPtr box)
 	return (int)(box->x2 - box->x1) * (int)(box->y2 - box->y1);
 }
 
-static Bool
-armsoc_crtc_on(xf86CrtcPtr crtc)
+static Bool armsoc_crtc_on(xf86CrtcPtr crtc)
 {
 	struct drmmode_crtc_private_rec * drmmode_crtc = crtc->driver_private;
 	return crtc->enabled && drmmode_crtc->dpms_mode == DPMSModeOn;
@@ -193,11 +192,9 @@ armsoc_crtc_covering_drawable(DrawablePtr pDraw)
 }
 
 
-static Bool
-armsoc_get_kernel_ust_msc(xf86CrtcPtr crtc,
-                          uint32_t *msc, uint64_t *ust)
+static Bool armsoc_get_kernel_ust_msc(xf86CrtcPtr crtc, uint32_t *msc, uint64_t *ust)
 {
-#ifdef ARMSOC_PRESENT_WAIT_VBLANK
+#if LOONGSON_PRESENT_WAIT_VBLANK
 	ScreenPtr screen = crtc->randr_crtc->pScreen;
 	ScrnInfoPtr scrn = xf86ScreenToScrn(screen);
 	struct ARMSOCRec * pARMSOC = ARMSOCPTR(scrn);
@@ -218,14 +215,14 @@ armsoc_get_kernel_ust_msc(xf86CrtcPtr crtc,
 	} else {
 		*msc = vbl.reply.sequence;
 		*ust = (CARD64) vbl.reply.tval_sec * 1000000 + vbl.reply.tval_usec;
-		ARMSOC_PRESENT_DBG_MSG("armsoc_get_kernel_ust_msc msc:%d ust:%d", *msc, *ust);
+		ARMSOC_PRESENT_DBG_MSG(" get_kernel_ust_msc msc:%d ust:%d", *msc, *ust);
 		return TRUE;
 	}
 #else
 	*msc = 0;
 	*ust = 0;
 
-	ARMSOC_PRESENT_DBG_MSG("armsoc_get_kernel_ust_msc msc:%d ust:%d", *msc, *ust);
+	ARMSOC_PRESENT_DBG_MSG(" get_kernel_ust_msc msc:%d ust:%d", *msc, *ust);
 	return TRUE;
 #endif
 
@@ -236,8 +233,7 @@ armsoc_get_kernel_ust_msc(xf86CrtcPtr crtc,
  * number, adding in the vblank_offset and high 32 bits, and dealing
  * with 64-bit wrapping
  */
-static uint64_t
-armsoc_kernel_msc_to_crtc_msc(xf86CrtcPtr crtc, uint32_t sequence)
+static uint64_t armsoc_kernel_msc_to_crtc_msc(xf86CrtcPtr crtc, uint32_t sequence)
 {
 	struct drmmode_crtc_private_rec *drmmode_crtc = crtc->driver_private;
 	sequence += drmmode_crtc->vblank_offset;
@@ -248,8 +244,7 @@ armsoc_kernel_msc_to_crtc_msc(xf86CrtcPtr crtc, uint32_t sequence)
 	return drmmode_crtc->msc_high + sequence;
 }
 
-static int
-armsoc_get_crtc_ust_msc(xf86CrtcPtr crtc, CARD64 *ust, CARD64 *msc)
+static int armsoc_get_crtc_ust_msc(xf86CrtcPtr crtc, CARD64 *ust, CARD64 *msc)
 {
 	uint32_t kernel_msc;
 
@@ -466,7 +461,7 @@ armsoc_present_queue_vblank(RRCrtcPtr crtc,
 	    DRM_VBLANK_ABSOLUTE | DRM_VBLANK_EVENT | drmmode_crtc->vblank_pipe;
 	vbl.request.sequence = armsoc_crtc_msc_to_kernel_msc(xf86_crtc, msc);
 	vbl.request.signal = (unsigned long)event;
-//#ifdef ARMSOC_PRESENT_WAIT_VBLANK
+#if LOONGSON_PRESENT_WAIT_VBLANK
 	for (;;) {
 		ret = drmWaitVBlank(pARMSOC->drmFD, &vbl);
 		ARMSOC_PRESENT_DBG_MSG("armsoc_present_queue_vblank drmWaitVBlank %d", ret);
@@ -481,7 +476,7 @@ armsoc_present_queue_vblank(RRCrtcPtr crtc,
 			return BadAlloc;
 		}
 	}
-//	#endif
+#endif
 	ARMSOC_PRESENT_DBG_MSG("armsoc_present_queue_vblank event_id:%llu seq:%u msc:%llu (sequence:%u)",
 	                       (long long) event_id, seq, (long long) msc,
 	                       vbl.request.sequence);
@@ -516,8 +511,7 @@ armsoc_present_abort_vblank(RRCrtcPtr crtc, uint64_t event_id, uint64_t msc)
 /*
  * Flush our batch buffer when requested by the Present extension.
  */
-static void
-armsoc_present_flush(WindowPtr window)
+static void armsoc_present_flush(WindowPtr window)
 {
 #ifdef ARMSOC_PRESENT_FLIP
 	ScreenPtr screen = window->drawable.pScreen;
@@ -755,15 +749,12 @@ armsoc_drm_handler(int fd, uint32_t frame, uint32_t sec, uint32_t usec,
 }
 
 
-Bool
-armsoc_present_screen_init(ScreenPtr screen)
+Bool LS7A_PresentScreenInit(ScreenPtr screen)
 {
 	ScrnInfoPtr scrn = xf86ScreenToScrn(screen);
 	struct ARMSOCRec * pARMSOC = ARMSOCPTR(scrn);
 	uint64_t value;
 	int ret;
-
-	ARMSOC_PRESENT_DBG_MSG("armsoc_present_screen_init");
 
 	xorg_list_init(&armsoc_drm_queue);
 
@@ -772,10 +763,13 @@ armsoc_present_screen_init(ScreenPtr screen)
 	event_context.page_flip_handler = armsoc_drm_handler;
 
 	ret = drmGetCap(pARMSOC->drmFD, DRM_CAP_ASYNC_PAGE_FLIP, &value);
-	if (ret == 0 && value == 1) {
-		ARMSOC_PRESENT_DBG_MSG("armsoc_present_screen_init PresentCapabilityAsync enable");
+	if (ret == 0 && value == 1)
+	{
+		xf86Msg(X_INFO, " PresentCapabilityAsync supported ");
 		armsoc_present_screen_info.capabilities |= PresentCapabilityAsync;
 	}
+
+	xf86Msg(X_INFO, " Present screen initialed \n");
 
 	return present_screen_init(screen, &armsoc_present_screen_info);
 }

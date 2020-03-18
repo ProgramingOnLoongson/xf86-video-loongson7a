@@ -56,9 +56,9 @@
 #include "drmmode_driver.h"
 
 /* Driver name as used in config file */
-#define LOONGSON7A_DRIVER_NAME	"loongson7a"
+#define LOONGSON7A_DRIVER_NAME		"loongson7a"
 /** Supported "chipsets." */
-#define ARMSOC_CHIPSET_NAME "LS7A1000"
+#define ARMSOC_CHIPSET_NAME		"LS7A1000"
 /* Apparently not used by X server */
 #define LOONGSON7A_DRIVER_VERSION	1000
 
@@ -1235,7 +1235,7 @@ static void LS7A_AccelInit(ScreenPtr pScreen)
 	{
 		pARMSOC->dri2 = ARMSOCDRI2ScreenInit(pScreen); // DRI2
 		pARMSOC->dri3 = ARMSOCDRI3ScreenInit(pScreen); // DRI3
-		armsoc_present_screen_init(pScreen); // Present
+		LS7A_PresentScreenInit(pScreen); // Present
 		ARMSOCVideoScreenInit(pScreen); // XV
 	}
 	else
@@ -1399,7 +1399,10 @@ static Bool ARMSOCScreenInit(SCREEN_INIT_ARGS_DECL)
 	}
 
 	/* ignore failures here as we will fall back to software cursor */
-	(void)drmmode_cursor_init(pScreen);
+	if( drmmode_cursor_init(pScreen) )
+	{
+		xf86DrvMsg(pScrn->scrnIndex, X_INFO, " Software cursor initialized.\n");
+	}
 
 	/* TODO: MIDEGL-1458: Is this the right place for this?
 	 * The Intel i830 driver says:
