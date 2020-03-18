@@ -1399,7 +1399,7 @@ static Bool ARMSOCScreenInit(SCREEN_INIT_ARGS_DECL)
 	}
 
 	/* ignore failures here as we will fall back to software cursor */
-	if( drmmode_cursor_init(pScreen) )
+	if( ! drmmode_cursor_init(pScreen) )
 	{
 		xf86DrvMsg(pScrn->scrnIndex, X_INFO, " Software cursor initialized.\n");
 	}

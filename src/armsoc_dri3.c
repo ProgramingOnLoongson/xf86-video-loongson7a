@@ -62,8 +62,8 @@ static int LS7A_DRI3Open(ScreenPtr pScreen, RRProviderPtr provider, int *o)
 	ScrnInfoPtr pScrn = xf86ScreenToScrn(pScreen);
 	struct ARMSOCRec *pARMSOC = ARMSOCPTR(pScrn);
 
-	int fd = drmOpen(pARMSOC->deviceName, NULL);
-	// int fd = open(pARMSOC->deviceName, O_RDWR | O_CLOEXEC);
+	// int fd = drmOpen(pARMSOC->deviceName, NULL);
+	int fd = open(pARMSOC->deviceName, O_RDWR | O_CLOEXEC);
 	if (fd < 0) {
 		ERROR_MSG(" LS7A_DRI3Open: cannot open %s", pARMSOC->deviceName);
 		return BadAlloc;
