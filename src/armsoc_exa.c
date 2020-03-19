@@ -48,7 +48,7 @@ Bool IsDumbPixmap(struct ARMSOCPixmapPrivRec *priv, int size)
 {
 	/* For pixmaps that are scanout or backing for windows, we
 	 * "accelerate" them by allocating them via GEM. For all other
-	 * pixmaps (where we never expect DRI2 CreateBuffer to be called), 
+	 * pixmaps (where we never expect DRI2 CreateBuffer to be called),
 	 * we just malloc them, which turns out to be much faster.
 	 */
 	return size > ARMSOC_BO_MIN_SIZE ||
@@ -295,24 +295,27 @@ static Bool ModifyExaPixmapHeader(struct ARMSOCPixmapPrivRec *priv, PixmapPtr pP
 
 	size = devKind * height;
 
-	/*
-		 * Someone is messing with the memory allocation. Let's step out of
-		 * the picture.
-		 */
+	// Someone is messing with the memory allocation. Let's step out of the picture.
 #ifdef ARMSOC_EXA_MAP_USERPTR
 	if (pPixData)
 	{
 #ifdef ARMSOC_EXA_DEBUG
-		INFO_MSG("Modify Pixmap Header %p pPixData(%p) != priv->buf.buf(%p) %dx%d %d %d/%d", pPixmap, pPixData, priv->buf.buf, width, height, devKind, bitsPerPixel, depth);
+		INFO_MSG("Modify Pixmap Header %p pPixData(%p) != priv->buf.buf(%p) %dx%d %d %d/%d",
+			pPixmap, pPixData, priv->buf.buf, width, height, devKind, bitsPerPixel, depth);
 #endif
-		if (pPixData != priv->buf.buf || priv->buf.size != size) {
-			if (priv->buf.buf && pARMSOC->pARMSOCEXA->UnmapUsermemBuf) {
+		if (pPixData != priv->buf.buf || priv->buf.size != size)
+		{
+			if (priv->buf.buf && pARMSOC->pARMSOCEXA->UnmapUsermemBuf)
+			{
 				pARMSOC->pARMSOCEXA->UnmapUsermemBuf(pARMSOC->pARMSOCEXA, &priv->buf);
 			}
 
-			if (pARMSOC->pARMSOCEXA->MapUsermemBuf && pARMSOC->pARMSOCEXA->MapUsermemBuf(pARMSOC->pARMSOCEXA, width, height, devKind, pPixData, &priv->buf)) {
+			if (pARMSOC->pARMSOCEXA->MapUsermemBuf && pARMSOC->pARMSOCEXA->MapUsermemBuf(pARMSOC->pARMSOCEXA, width, height, devKind, pPixData, &priv->buf))
+			{
 				return TRUE;
-			} else {
+			}
+			else
+			{
 				priv->buf.buf = NULL;
 				priv->buf.size = 0;
 				priv->buf.pitch = 0;
@@ -320,15 +323,19 @@ static Bool ModifyExaPixmapHeader(struct ARMSOCPixmapPrivRec *priv, PixmapPtr pP
 				/* Returning FALSE calls miModifyPixmapHeader */
 				return FALSE;
 			}
-		} else {
+		}
+		else
+		{
 			return TRUE;
 		}
 	}
 #endif
 
-	if (!priv->buf.buf || priv->buf.size != size) {
+	if (!priv->buf.buf || priv->buf.size != size)
+	{
 		/* re-allocate buffer! */
-		if (priv->buf.buf) {
+		if (priv->buf.buf)
+		{
 			pARMSOC->pARMSOCEXA->FreeBuf(pARMSOC->pARMSOCEXA, &priv->buf);
 		}
 
@@ -351,10 +358,9 @@ static Bool ModifyExaPixmapHeader(struct ARMSOCPixmapPrivRec *priv, PixmapPtr pP
 }
 
 
-static Bool
-ModifyDumbPixmapHeader(struct ARMSOCPixmapPrivRec * priv, PixmapPtr pPixmap, int width, int height,
-                       int depth, int bitsPerPixel, int devKind,
-                       pointer pPixData)
+static Bool ModifyDumbPixmapHeader(struct ARMSOCPixmapPrivRec * priv,
+		PixmapPtr pPixmap, int width, int height,
+		int depth, int bitsPerPixel, int devKind, pointer pPixData)
 {
 	ScrnInfoPtr pScrn = pix2scrn(pPixmap);
 	struct ARMSOCRec *pARMSOC = ARMSOCPTR(pScrn);
@@ -475,18 +481,19 @@ ModifyDumbPixmapHeader(struct ARMSOCPixmapPrivRec * priv, PixmapPtr pPixmap, int
 }
 
 _X_EXPORT Bool ARMSOCModifyPixmapHeader(PixmapPtr pPixmap, int width, int height,
-                         int depth, int bitsPerPixel, int devKind, pointer pPixData)
+                         int depth, int bitsPerPixel, int pitch, pointer pPixData)
 {
 	ScrnInfoPtr pScrn = pix2scrn(pPixmap);
 	struct ARMSOCRec *pARMSOC = ARMSOCPTR(pScrn);
 	struct ARMSOCPixmapPrivRec *priv = exaGetPixmapDriverPrivate(pPixmap);
 
-	INFO_MSG(" pixmap:%p pix:%p %dx%d %d %d", pPixmap, priv, width, height, depth, bitsPerPixel);
+	//  INFO_MSG(" pixmap:%p pix:%p %dx%d %d %d", 
+	//  pPixmap, priv, width, height, depth, bitsPerPixel);
 
-	if (IsDumbPixmap(priv, width * height * (bitsPerPixel / 8)))
-		return ModifyDumbPixmapHeader(priv, pPixmap, width, height, depth, bitsPerPixel, devKind, pPixData);
-	else
-		return ModifyExaPixmapHeader(priv, pPixmap, width, height, depth, bitsPerPixel, devKind, pPixData);
+// 	if (IsDumbPixmap(priv, width * height * (bitsPerPixel / 8)))
+//		return ModifyDumbPixmapHeader(priv, pPixmap, width, height, depth, bitsPerPixel, pitch, pPixData);
+//	else
+		return ModifyExaPixmapHeader(priv, pPixmap, width, height, depth, bitsPerPixel, pitch, pPixData);
 }
 
 /**

@@ -354,7 +354,8 @@ uint32_t armsoc_bo_pitch(struct armsoc_bo *bo)
 void *armsoc_bo_map(struct armsoc_bo *bo)
 {
 	assert(bo->refcnt > 0);
-	if (!bo->map_addr) {
+	if (!bo->map_addr)
+	{
 		struct drm_mode_map_dumb map_dumb;
 		int res;
 

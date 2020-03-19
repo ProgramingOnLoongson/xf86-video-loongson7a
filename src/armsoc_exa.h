@@ -99,15 +99,13 @@ struct ARMSOCEXARec *InitNullEXA(ScreenPtr pScreen, ScrnInfoPtr pScrn, int fd);
 
 struct ARMSOCEXARec *ARMSOCEXAPTR(ScrnInfoPtr pScrn);
 
-static inline ScrnInfoPtr
-pix2scrn(PixmapPtr pPixmap)
+static inline ScrnInfoPtr pix2scrn(PixmapPtr pPixmap)
 {
 	ScreenPtr pScreen = (pPixmap)->drawable.pScreen;
 	return xf86ScreenToScrn(pScreen);
 }
 
-static inline PixmapPtr
-draw2pix(DrawablePtr pDraw)
+static inline PixmapPtr draw2pix(DrawablePtr pDraw)
 {
 	if (!pDraw)
 		return NULL;

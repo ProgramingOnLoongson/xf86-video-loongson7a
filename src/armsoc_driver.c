@@ -2,6 +2,7 @@
 
 /*
  * Copyright © 2011 Texas Instruments, Inc
+ * Copyright © 2020 LOONGSON, Inc
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -25,6 +26,7 @@
  * Authors:
  *    Ian Elliott <ianelliottus@yahoo.com>
  *    Rob Clark <rob@ti.com>
+ *    Sui Jingfeng <suijingfeng@loongson.cn>
  */
 
 #ifdef HAVE_CONFIG_H
@@ -59,8 +61,7 @@
 #define LOONGSON7A_DRIVER_NAME		"loongson7a"
 /** Supported "chipsets." */
 #define ARMSOC_CHIPSET_NAME		"LS7A1000"
-/* Apparently not used by X server */
-#define LOONGSON7A_DRIVER_VERSION	1000
+
 
 
 /* Cursor dimensions
@@ -79,9 +80,7 @@ Bool armsocDebug;
 /*
  * Forward declarations:
  */
-static const OptionInfoRec *AvailableOptions(int chipid, int busid);
-static void Identify(int flags);
-static Bool Probe(DriverPtr drv, int flags);
+
 static Bool ARMSOCPreInit(ScrnInfoPtr pScrn, int flags);
 static Bool ARMSOCScreenInit(SCREEN_INIT_ARGS_DECL);
 static void LoadPalette(ScrnInfoPtr pScrn, int numColors, int *indices,
@@ -96,147 +95,7 @@ static void ARMSOCLeaveVT(VT_FUNC_ARGS_DECL);
 static void ARMSOCFreeScreen(FREE_SCREEN_ARGS_DECL);
 
 
-#ifdef XSERVER_LIBPCIACCESS
-static const struct pci_id_match loongson7a_device_match[] = {
-    { PCI_MATCH_ANY, PCI_MATCH_ANY, PCI_MATCH_ANY, PCI_MATCH_ANY,
-     0x00030000, 0x00ff0000, 0},
 
-    {0, 0, 0},
-};
-#endif
-
-
-#ifdef XSERVER_LIBPCIACCESS
-static int get_passed_fd(void)
-{
-    if (xf86DRMMasterFd >= 0)
-    {
-        xf86DrvMsg(-1, X_INFO, 
-		"Using passed DRM master file descriptor %d\n", xf86DRMMasterFd);
-        return dup(xf86DRMMasterFd);
-    }
-    return -1;
-}
-
-static int LS_OpenHW(const char *dev)
-{
-    int fd;
-
-    if ((fd = get_passed_fd()) != -1)
-        return fd;
-
-    if (dev)
-        fd = open(dev, O_RDWR | O_CLOEXEC, 0);
-    else {
-        dev = getenv("KMSDEVICE");
-        if ((NULL == dev) || ((fd = open(dev, O_RDWR | O_CLOEXEC, 0)) == -1)) {
-            dev = "/dev/dri/card0";
-            fd = open(dev, O_RDWR | O_CLOEXEC, 0);
-        }
-    }
-    if (fd == -1)
-        xf86DrvMsg(-1, X_ERROR, "open %s: %s\n", dev, strerror(errno));
-
-    return fd;
-}
-
-static char * LS_DRICreatePCIBusID(const struct pci_device *dev)
-{
-    char *busID;
-
-    if (asprintf(&busID, "pci:%04x:%02x:%02x.%d",
-                 dev->domain, dev->bus, dev->dev, dev->func) == -1)
-        return NULL;
-
-    return busID;
-}
-
-static int LS_CheckOutputs(int fd, int *count)
-{
-    drmModeResPtr res = drmModeGetResources(fd);
-    int ret;
-
-    if (!res)
-        return FALSE;
-
-    if (count)
-        *count = res->count_connectors;
-
-    ret = res->count_connectors > 0;
-
-    if (ret == FALSE) {
-        uint64_t value = 0;
-        if (drmGetCap(fd, DRM_CAP_PRIME, &value) == 0 &&
-                (value & DRM_PRIME_CAP_EXPORT))
-            ret = TRUE;
-    }
-
-    drmModeFreeResources(res);
-    return ret;
-}
-
-static Bool probe_hw_pci(const char *dev, struct pci_device *pdev)
-{
-    int ret = FALSE, fd = LS_OpenHW(dev);
-    char *id, *devid;
-    drmSetVersion sv;
-
-    if (fd == -1)
-        return FALSE;
-
-    sv.drm_di_major = 1;
-    sv.drm_di_minor = 4;
-    sv.drm_dd_major = -1;
-    sv.drm_dd_minor = -1;
-    if (drmSetInterfaceVersion(fd, &sv)) {
-        close(fd);
-        return FALSE;
-    }
-
-    id = drmGetBusid(fd);
-    devid = LS_DRICreatePCIBusID(pdev);
-
-    if (id && devid && !strcmp(id, devid))
-        ret = LS_CheckOutputs(fd, NULL);
-
-    close(fd);
-    free(id);
-    free(devid);
-    return ret;
-}
-
-
-static void LS_SetupScrnHooks(ScrnInfoPtr pScrn)
-{
-	pScrn->driverVersion = LOONGSON7A_DRIVER_VERSION;
-	pScrn->driverName    = LOONGSON7A_DRIVER_NAME;
-	pScrn->name          = LOONGSON7A_DRIVER_NAME;
-	pScrn->Probe         = NULL;
-	pScrn->PreInit       = ARMSOCPreInit;
-	pScrn->ScreenInit    = ARMSOCScreenInit;
-	pScrn->SwitchMode    = ARMSOCSwitchMode;
-	pScrn->AdjustFrame   = ARMSOCAdjustFrame;
-	pScrn->EnterVT       = ARMSOCEnterVT;
-	pScrn->LeaveVT       = ARMSOCLeaveVT;
-	pScrn->FreeScreen    = ARMSOCFreeScreen;
-/*
-    scrn->driverVersion = 1;
-    scrn->driverName = "modesetting";
-    scrn->name = "modeset";
-
-    scrn->Probe = NULL;
-    scrn->PreInit = PreInit;
-    scrn->ScreenInit = ScreenInit;
-    scrn->SwitchMode = SwitchMode;
-    scrn->AdjustFrame = AdjustFrame;
-    scrn->EnterVT = EnterVT;
-    scrn->LeaveVT = LeaveVT;
-    scrn->FreeScreen = FreeScreen;
-    scrn->ValidMode = ValidMode;
-*/
-}
-
-int ms_entity_index=-1;
 
 
 /**
@@ -250,127 +109,6 @@ static struct ARMSOCConnection {
 	int open_count;
 	int master_count;
 } connection = {NULL, NULL, 0, -1, 0, 0};
-
-
-static void ls_setup_entity(ScrnInfoPtr scrn, int entity_num)
-{
-
-    DevUnion *pPriv;
-
-    xf86SetEntitySharable(entity_num);
-
-    if (ms_entity_index == -1)
-        ms_entity_index = xf86AllocateEntityPrivateIndex();
-
-    pPriv = xf86GetEntityPrivate(entity_num, ms_entity_index);
-
-    xf86SetEntityInstanceForScreen(scrn, entity_num, xf86GetNumEntityInstances(entity_num) - 1);
-
-    if (!pPriv->ptr)
-        pPriv->ptr = xnfcalloc(sizeof(struct ARMSOCConnection), 1);
-}
-
-static Bool loongson7a_pci_probe(DriverPtr driver,
-             int entity_num, struct pci_device *dev, intptr_t match_data)
-{
-    ScrnInfoPtr scrn = NULL;
-
-    scrn = xf86ConfigPciEntity(scrn, 0, entity_num, NULL,  NULL, NULL, NULL, NULL, NULL);
-
-    if (scrn)
-    {
-        const char *devpath;
-        GDevPtr devSection = xf86GetDevFromEntity(scrn->entityList[0],
-                                                  scrn->entityInstanceList[0]);
-
-        devpath = xf86FindOptionValue(devSection->options, "kmsdev");
-        if (probe_hw_pci(devpath, dev))
-	{
-	    // suijingfeng
-            // LS_SetupScrnHooks(scrn);
-
-            xf86DrvMsg(scrn->scrnIndex, X_CONFIG,
-                       "claimed PCI slot %d@%d:%d:%d\n",
-                       dev->bus, dev->domain, dev->dev, dev->func);
-            xf86DrvMsg(scrn->scrnIndex, X_INFO,
-                       "using %s\n", devpath ? devpath : "default device");
-
-            // ls_setup_entity(scrn, entity_num);
-        }
-        else
-            scrn = NULL;
-    }
-    return scrn != NULL;
-}
-#endif
-
-static Bool loongson7a_driver_func(ScrnInfoPtr scrn, xorgDriverFuncOp op, void *data)
-{
-    xorgHWFlags *flag;
-
-    switch (op) {
-    case GET_REQUIRED_HW_INTERFACES:
-        flag = (CARD32 *) data;
-        (*flag) = 0;
-        return TRUE;
-    case SUPPORTS_SERVER_FDS:
-        return TRUE;
-    default:
-        return FALSE;
-    }
-}
-
-/**
- * A structure used by the XFree86 code when loading this driver, so that it
- * can access the Probe() function, and other functions/info that it uses
- * before it calls the Probe() function.  The name of this structure must be
- * the all-upper-case version of the driver name.
- */
-_X_EXPORT DriverRec Loongson7a = {
-	LOONGSON7A_DRIVER_VERSION,
-	LOONGSON7A_DRIVER_NAME,
-	Identify,
-	Probe,
-	AvailableOptions,
-	NULL,
-	0,
-	loongson7a_driver_func,
-#ifdef XSERVER_LIBPCIACCESS
-	loongson7a_device_match,
-	NULL, /* loongson7a_pci_probe, */
-	NULL
-#endif
-};
-
-
-
-/** Supported options, as enum values. */
-enum {
-	OPTION_DEBUG,
-	OPTION_NO_FLIP,
-	OPTION_CARD_NUM,
-	OPTION_DEV_PATH,
-	OPTION_BUSID,
-	OPTION_DRIVERNAME,
-	OPTION_DRI_NUM_BUF,
-	OPTION_INIT_FROM_FBDEV,
-	OPTION_SOFT_EXA,
-};
-
-/** Supported options. */
-static const OptionInfoRec Options[] = {
-	{ OPTION_DEBUG,      "Debug",      OPTV_BOOLEAN, {0}, FALSE },
-	{ OPTION_NO_FLIP,    "NoFlip",     OPTV_BOOLEAN, {0}, FALSE },
-	{ OPTION_CARD_NUM,   "DRICard",    OPTV_INTEGER, {0}, FALSE },
-	{ OPTION_DEV_PATH,   "kmsdev",     OPTV_STRING, {0}, FALSE },
-	{ OPTION_BUSID,      "BusID",      OPTV_STRING,  {0}, FALSE },
-	{ OPTION_DRIVERNAME, "DriverName", OPTV_STRING,  {0}, FALSE },
-	{ OPTION_DRI_NUM_BUF, "DRI2MaxBuffers", OPTV_INTEGER, { -1}, FALSE },
-	{ OPTION_INIT_FROM_FBDEV, "InitFromFBDev", OPTV_STRING, {0}, FALSE },
-	{ OPTION_SOFT_EXA,   "SoftEXA",   OPTV_BOOLEAN, {0}, FALSE },
-	{ -1,                NULL,         OPTV_NONE,    {0}, FALSE }
-};
-
 
 
 static int LS7A_InitPlaneForCursor(int drm_fd, uint32_t plane_id)
@@ -776,82 +514,194 @@ exit:
 }
 
 
-
-/** Let the XFree86 code know the Setup() function. */
-static MODULESETUPPROTO(Setup);
-
-/** Provide basic version information to the XFree86 code. */
-static XF86ModuleVersionInfo VersRec = {
-	LOONGSON7A_DRIVER_NAME,
-	MODULEVENDORSTRING,
-	MODINFOSTRING1,
-	MODINFOSTRING2,
-	XORG_VERSION_CURRENT,
-	PACKAGE_VERSION_MAJOR,
-	PACKAGE_VERSION_MINOR,
-	PACKAGE_VERSION_PATCHLEVEL,
-	ABI_CLASS_VIDEODRV,
-	ABI_VIDEODRV_VERSION,
-	MOD_CLASS_VIDEODRV,
-	{0, 0, 0, 0}
-};
-
-/** Let the XFree86 code know about the VersRec and Setup() function. */
-_X_EXPORT XF86ModuleData loongson7aModuleData = { &VersRec, Setup, NULL };
+void LS7A_SetupScrnHooks(ScrnInfoPtr pScrn)
+{
+	pScrn->driverVersion = 1;
+	pScrn->driverName    = LOONGSON7A_DRIVER_NAME;
+	pScrn->name          = LOONGSON7A_DRIVER_NAME;
+	pScrn->Probe         = NULL;
+	pScrn->PreInit       = ARMSOCPreInit;
+	pScrn->ScreenInit    = ARMSOCScreenInit;
+	pScrn->SwitchMode    = ARMSOCSwitchMode;
+	pScrn->AdjustFrame   = ARMSOCAdjustFrame;
+	pScrn->EnterVT       = ARMSOCEnterVT;
+	pScrn->LeaveVT       = ARMSOCLeaveVT;
+	pScrn->FreeScreen    = ARMSOCFreeScreen;
+}
 
 
 /**
- * The first function that the XFree86 code calls, after loading this .
+ * The driver's PreInit() function.
+ * Additional hardware probing is allowed now, including display configuration.
  */
-static void * Setup(pointer module, pointer opts, int *errmaj, int *errmin)
+static Bool ARMSOCPreInit(ScrnInfoPtr pScrn, int flags)
 {
-	static Bool setupDone = FALSE;
+	struct ARMSOCRec *pARMSOC;
+	int default_depth, fbbpp;
+	rgb defaultWeight = { 0, 0, 0 };
+	rgb defaultMask = { 0, 0, 0 };
+	Gamma defaultGamma = { 0.0, 0.0, 0.0 };
 
-	/* This module should be loaded only once, but check to be sure: */
-	if (!setupDone)
+//	int flags24;
+
+	TRACE_ENTER();
+
+	if (flags & PROBE_DETECT) {
+		ERROR_MSG(
+		    "The %s driver does not support the \"-configure\" or \"-probe\" command line arguments.",
+		    LOONGSON7A_DRIVER_NAME);
+		return FALSE;
+	}
+
+	/* Check the number of entities, and fail if it isn't one. */
+	if (pScrn->numEntities != 1) {
+		ERROR_MSG(
+		    "Driver expected 1 entity, but found %d for screen %d",
+		    pScrn->numEntities, pScrn->scrnIndex);
+		return FALSE;
+	}
+
+	pARMSOC = ARMSOCPTR(pScrn);
+	pARMSOC->pEntityInfo = xf86GetEntityInfo(pScrn->entityList[0]);
+
+	pScrn->monitor = pScrn->confScreen->monitor;
+
+	/* Get the current color depth & bpp, and set it for XFree86: */
+	default_depth = 24;  /* TODO: MIDEGL-1445: get from kernel */
+	fbbpp = 32;          /* TODO: MIDEGL-1445: get from kernel */
+
+//	flags24 = Support24bppFb | Support32bppFb | SupportConvert24to32;
+//	if (!xf86SetDepthBpp(pScrn, 0, 0, 0, flags24))
+//		goto fail;
+
+	if (!xf86SetDepthBpp(pScrn, default_depth, 0, fbbpp, Support32bppFb)) {
+		/* The above function prints an error message. */
+		goto fail;
+	}
+	xf86PrintDepthBpp(pScrn);
+
+	/* Set the color weight: */
+	if (!xf86SetWeight(pScrn, defaultWeight, defaultMask)) {
+		/* The above function prints an error message. */
+		goto fail;
+	}
+
+	/* Set the gamma: */
+	if (!xf86SetGamma(pScrn, defaultGamma)) {
+		/* The above function prints an error message. */
+		goto fail;
+	}
+
+	/* Visual init: */
+	if (!xf86SetDefaultVisual(pScrn, -1)) {
+		/* The above function prints an error message. */
+		goto fail;
+	}
+
+	/* We don't support 8-bit depths: */
+	if (pScrn->depth < 16) {
+		ERROR_MSG(
+		    "The requested default visual (%s) has an unsupported depth (%d).",
+		    xf86GetVisualName(pScrn->defaultVisual),
+		    pScrn->depth);
+		goto fail;
+	}
+
+	/* Using a programmable clock: */
+	pScrn->progClock = TRUE;
+
+	/* Open a connection to the DRM, so we can communicate with the KMS code:
+	 */
+	if (!ARMSOCOpenDRM(pScrn))
+		goto fail;
+
+	pARMSOC->drmmode_interface = &loongson7a_interface;
+	if (!pARMSOC->drmmode_interface)
+		goto fail2;
+
+	/* create DRM device instance: */
+	pARMSOC->dev = armsoc_device_new(pARMSOC->drmFD);
+
+	/* set chipset name: */
+	pScrn->chipset = (char *)ARMSOC_CHIPSET_NAME;
+
+	/*
+	 * Process the "xorg.conf" file options:
+	xf86CollectOptions(pScrn, NULL);
+	pARMSOC->pOptionInfo = malloc(sizeof(Options));
+	if (!pARMSOC->pOptionInfo)
+		goto fail2;
+
+	memcpy(pARMSOC->pOptionInfo, Options, sizeof(Options));
+	xf86ProcessOptions(pScrn->scrnIndex,
+	                   pARMSOC->pEntityInfo->device->options,
+	                   pARMSOC->pOptionInfo);
+	 */
+	extern void ProcessXorgConfOptions(ScrnInfoPtr pScrn,
+		struct ARMSOCRec *pARMSOC);
+
+	ProcessXorgConfOptions(pScrn, pARMSOC);
+
+
+	/*
+	 * Select the video modes:
+	 */
+	xf86DrvMsg(pScrn->scrnIndex, X_INFO, "Setting the video modes ... \n");
+
+	/* Don't call drmCheckModesettingSupported() as its written only for PCI devices.
+	 */
+
+	/* Do initial KMS setup: */
+	if (!drmmode_pre_init(pScrn, pARMSOC->drmFD, (pScrn->bitsPerPixel >> 3)))
 	{
-		setupDone = TRUE;
-		xf86AddDriver(&Loongson7a, module, 0);
-
-		/* The return value must be non-NULL on success even
-		 * though there is no TearDownProc.
-		 */
-		return (void *) 1;
+		ERROR_MSG("Cannot get KMS resources");
+		goto fail2;
 	}
 	else
 	{
-		if (errmaj)
-			*errmaj = LDR_ONCEONLY;
-		return NULL;
+		xf86DrvMsg(pScrn->scrnIndex, X_INFO, " Initial KMS successful. \n");
 	}
+
+	xf86RandR12PreInit(pScrn);
+
+	/* Let XFree86 calculate or get (from command line) the display DPI: */
+	xf86SetDpi(pScrn, 0, 0);
+
+	/* Ensure we have a supported bitsPerPixel: */
+	switch (pScrn->bitsPerPixel) {
+	case 16:
+	case 24:
+	case 32:
+		break;
+	default:
+		ERROR_MSG(
+		    "The requested number of bits per pixel (%d) is unsupported.",
+		    pScrn->bitsPerPixel);
+		goto fail2;
+	}
+
+	/* Load external sub-modules now: */
+	if (!(xf86LoadSubModule(pScrn, "dri2") &&
+		xf86LoadSubModule(pScrn, "dri3") &&
+		xf86LoadSubModule(pScrn, "exa") &&
+		xf86LoadSubModule(pScrn, "fb"))) {
+		goto fail2;
+	}
+
+	TRACE_EXIT();
+	return TRUE;
+
+fail2:
+	/* Cleanup here where we know whether we took a connection
+	 * instead of in FreeScreen where we don't */
+	ARMSOCDropDRMMaster();
+	ARMSOCCloseDRM(pScrn);
+fail:
+	TRACE_EXIT();
+	return FALSE;
 }
 
-/**
- * The mandatory AvailableOptions() function.  It returns the available driver
- * options to the "-configure" option, so that an xorg.conf file can be built
- * and the user can see which options are available for them to use.
- */
-static const OptionInfoRec * AvailableOptions(int chipid, int busid)
-{
-	return Options;
-}
 
-/**
- * The mandatory Identify() function.  It is run before Probe(), 
- * and prints out an identifying message.
- */
-
-static SymTabRec Chipsets[] = {
-    {0, "LS7A1000"},
-    {1, "LS7A2000"},
-    {-1, NULL}
-};
-
-static void Identify(int flags)
-{
-	xf86PrintChipsets(LOONGSON7A_DRIVER_NAME, "Device Dependent X Driver for",
-                      Chipsets);
-}
 
 /**
  * The driver's Probe() function.  This function finds all instances of
@@ -860,7 +710,7 @@ static void Identify(int flags)
  * claim the instances, and allocate a ScrnInfoRec.  Only minimal hardware
  * probing is allowed here.
  */
-static Bool Probe(DriverPtr drv, int flags)
+Bool LS7A_Probe(DriverPtr drv, int flags)
 {
 	int i;
 	ScrnInfoPtr pScrn;
@@ -1000,7 +850,7 @@ static Bool Probe(DriverPtr drv, int flags)
 
 			foundScreen = TRUE;
 
-			LS_SetupScrnHooks(pScrn);
+			LS7A_SetupScrnHooks(pScrn);
 
 
 			/* would be nice to keep the connection open */
@@ -1014,202 +864,6 @@ out:
 	return foundScreen;
 }
 
-
-/**
- * The driver's PreInit() function.  
- * Additional hardware probing is allowed now, including display configuration.
- */
-static Bool ARMSOCPreInit(ScrnInfoPtr pScrn, int flags)
-{
-	struct ARMSOCRec *pARMSOC;
-	int default_depth, fbbpp;
-	rgb defaultWeight = { 0, 0, 0 };
-	rgb defaultMask = { 0, 0, 0 };
-	Gamma defaultGamma = { 0.0, 0.0, 0.0 };
-	int driNumBufs;
-//	int flags24;
-
-	TRACE_ENTER();
-
-	if (flags & PROBE_DETECT) {
-		ERROR_MSG(
-		    "The %s driver does not support the \"-configure\" or \"-probe\" command line arguments.",
-		    LOONGSON7A_DRIVER_NAME);
-		return FALSE;
-	}
-
-	/* Check the number of entities, and fail if it isn't one. */
-	if (pScrn->numEntities != 1) {
-		ERROR_MSG(
-		    "Driver expected 1 entity, but found %d for screen %d",
-		    pScrn->numEntities, pScrn->scrnIndex);
-		return FALSE;
-	}
-
-	pARMSOC = ARMSOCPTR(pScrn);
-	pARMSOC->pEntityInfo = xf86GetEntityInfo(pScrn->entityList[0]);
-
-	pScrn->monitor = pScrn->confScreen->monitor;
-
-	/* Get the current color depth & bpp, and set it for XFree86: */
-	default_depth = 24;  /* TODO: MIDEGL-1445: get from kernel */
-	fbbpp = 32;          /* TODO: MIDEGL-1445: get from kernel */
-
-//	flags24 = Support24bppFb | Support32bppFb | SupportConvert24to32;
-//	if (!xf86SetDepthBpp(pScrn, 0, 0, 0, flags24))
-//		goto fail;
-
-	if (!xf86SetDepthBpp(pScrn, default_depth, 0, fbbpp, Support32bppFb)) {
-		/* The above function prints an error message. */
-		goto fail;
-	}
-	xf86PrintDepthBpp(pScrn);
-
-	/* Set the color weight: */
-	if (!xf86SetWeight(pScrn, defaultWeight, defaultMask)) {
-		/* The above function prints an error message. */
-		goto fail;
-	}
-
-	/* Set the gamma: */
-	if (!xf86SetGamma(pScrn, defaultGamma)) {
-		/* The above function prints an error message. */
-		goto fail;
-	}
-
-	/* Visual init: */
-	if (!xf86SetDefaultVisual(pScrn, -1)) {
-		/* The above function prints an error message. */
-		goto fail;
-	}
-
-	/* We don't support 8-bit depths: */
-	if (pScrn->depth < 16) {
-		ERROR_MSG(
-		    "The requested default visual (%s) has an unsupported depth (%d).",
-		    xf86GetVisualName(pScrn->defaultVisual),
-		    pScrn->depth);
-		goto fail;
-	}
-
-	/* Using a programmable clock: */
-	pScrn->progClock = TRUE;
-
-	/* Open a connection to the DRM, so we can communicate with the KMS code:
-	 */
-	if (!ARMSOCOpenDRM(pScrn))
-		goto fail;
-
-	pARMSOC->drmmode_interface = &loongson7a_interface;
-	if (!pARMSOC->drmmode_interface)
-		goto fail2;
-
-	/* create DRM device instance: */
-	pARMSOC->dev = armsoc_device_new(pARMSOC->drmFD);
-
-	/* set chipset name: */
-	pScrn->chipset = (char *)ARMSOC_CHIPSET_NAME;
-	xf86DrvMsg(pScrn->scrnIndex, X_INFO, " Chipset: %s \n", pScrn->chipset);
-
-	/*
-	 * Process the "xorg.conf" file options:
-	 */
-	xf86CollectOptions(pScrn, NULL);
-	pARMSOC->pOptionInfo = malloc(sizeof(Options));
-	if (!pARMSOC->pOptionInfo)
-		goto fail2;
-
-	memcpy(pARMSOC->pOptionInfo, Options, sizeof(Options));
-	xf86ProcessOptions(pScrn->scrnIndex,
-	                   pARMSOC->pEntityInfo->device->options,
-	                   pARMSOC->pOptionInfo);
-
-	/* Determine if the user wants debug messages turned on: */
-	armsocDebug = xf86ReturnOptValBool(pARMSOC->pOptionInfo, OPTION_DEBUG, FALSE);
-
-	if (!xf86GetOptValInteger(pARMSOC->pOptionInfo, OPTION_DRI_NUM_BUF,
-	                          &driNumBufs)) {
-		/* Default to double buffering */
-		driNumBufs = 2;
-	}
-
-	if (driNumBufs < 2) {
-		ERROR_MSG(
-		    "Invalid option for %s: %d. Must be greater than or equal to 2",
-		    xf86TokenToOptName(pARMSOC->pOptionInfo,
-		                       OPTION_DRI_NUM_BUF),
-		    driNumBufs);
-		return FALSE;
-	}
-	pARMSOC->driNumBufs = driNumBufs;
-	/* Determine if user wants to disable buffer flipping: */
-	pARMSOC->NoFlip = xf86ReturnOptValBool(pARMSOC->pOptionInfo,
-	                                       OPTION_NO_FLIP, FALSE);
-	xf86DrvMsg(pScrn->scrnIndex, X_INFO, 
-		"Buffer Flipping is %s\n", pARMSOC->NoFlip ? "Disabled" : "Enabled");
-
-	pARMSOC->SoftExa = xf86ReturnOptValBool(pARMSOC->pOptionInfo,
-	                                        OPTION_SOFT_EXA, FALSE);
-	xf86DrvMsg(pScrn->scrnIndex, X_INFO, 
-		"Hardware EXA is %s\n", pARMSOC->SoftExa ? "Disabled" : "Enabled");
-
-	/*
-	 * Select the video modes:
-	 */
-	xf86DrvMsg(pScrn->scrnIndex, X_INFO, "Setting the video modes ... \n");
-
-	/* Don't call drmCheckModesettingSupported() as its written only for PCI devices.
-	 */
-
-	/* Do initial KMS setup: */
-	if (!drmmode_pre_init(pScrn, pARMSOC->drmFD, (pScrn->bitsPerPixel >> 3)))
-	{
-		ERROR_MSG("Cannot get KMS resources");
-		goto fail2;
-	}
-	else
-	{
-		xf86DrvMsg(pScrn->scrnIndex, X_INFO, " Initial KMS successful. \n");
-	}
-
-	xf86RandR12PreInit(pScrn);
-
-	/* Let XFree86 calculate or get (from command line) the display DPI: */
-	xf86SetDpi(pScrn, 0, 0);
-
-	/* Ensure we have a supported bitsPerPixel: */
-	switch (pScrn->bitsPerPixel) {
-	case 16:
-	case 24:
-	case 32:
-		break;
-	default:
-		ERROR_MSG(
-		    "The requested number of bits per pixel (%d) is unsupported.",
-		    pScrn->bitsPerPixel);
-		goto fail2;
-	}
-
-	/* Load external sub-modules now: */
-	if (!(xf86LoadSubModule(pScrn, "dri2") &&
-	        xf86LoadSubModule(pScrn, "dri3") &&
-	        xf86LoadSubModule(pScrn, "exa") &&
-	        xf86LoadSubModule(pScrn, "fb"))) {
-		goto fail2;
-	}
-
-	TRACE_EXIT();
-	return TRUE;
-
-fail2:
-	/* Cleanup here where we know whether we took a connection
-	 * instead of in FreeScreen where we don't */
-	ARMSOCDropDRMMaster();
-	ARMSOCCloseDRM(pScrn);
-fail:
-	TRACE_EXIT();
-	return FALSE;
-}
 
 
 /**
@@ -1235,7 +889,7 @@ static void LS7A_AccelInit(ScreenPtr pScreen)
 	{
 		pARMSOC->dri2 = ARMSOCDRI2ScreenInit(pScreen); // DRI2
 		pARMSOC->dri3 = ARMSOCDRI3ScreenInit(pScreen); // DRI3
-		LS7A_PresentScreenInit(pScreen); // Present
+		pARMSOC->present = LS7A_PresentScreenInit(pScreen); // Present
 		ARMSOCVideoScreenInit(pScreen); // XV
 	}
 	else
@@ -1379,16 +1033,17 @@ static Bool ARMSOCScreenInit(SCREEN_INIT_ARGS_DECL)
 
 	/* Initialize backing store: */
 	xf86SetBackingStore(pScreen);
-
+/*
 	fbdev = xf86GetOptValString(pARMSOC->pOptionInfo, OPTION_INIT_FROM_FBDEV);
-	if (fbdev && *fbdev != '\0') {
-		if (ARMSOCCopyFB(pScrn, fbdev)) {
-			/* Only allow None BG root if we initialized the scanout
-			 * buffer */
+	if (fbdev && *fbdev != '\0')
+	{
+		if (ARMSOCCopyFB(pScrn, fbdev))
+		{
+			// Only allow None BG root if we initialized the scanout buffer
 			pScreen->canDoBGNoneRoot = TRUE;
 		}
 	}
-
+*/
 	/* Enable cursor position updates by mouse signal handler: */
 	xf86SetSilkenMouse(pScreen);
 

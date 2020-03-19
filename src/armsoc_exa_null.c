@@ -17,8 +17,8 @@
 
 #include <exa.h>
 
-/* This file has a trivial EXA implementation which accelerates nothing. 
- * It is used as the fall-back in case the EXA implementation for the 
+/* This file has a trivial EXA implementation which accelerates nothing.
+ * It is used as the fall-back in case the EXA implementation for the
  * current chipset is not available. For example, on chipsets which used
  * the closed source IMG PowerVR/vivante EXA implementation, if the closed-source
  * submodule is not installed.
@@ -28,13 +28,13 @@
 #define NULL_DBG_MSG(fmt, ...)		\
 	do { xf86Msg(X_INFO, fmt "\n", ##__VA_ARGS__); } while (0)
 
-struct ARMSOCNullEXARec {
+struct SoftExaRec_T {
 	struct ARMSOCEXARec base;
 	ExaDriverPtr exa;
 	/* add any other driver private data here.. */
 };
 
-static void AllocBuf( struct ARMSOCEXARec *exa, int width, int height, 
+static void AllocBuf( struct ARMSOCEXARec *exa, int width, int height,
 		int depth, int bpp, int usage_hint, struct ARMSOCEXABuf * pBuf)
 {
 	unsigned int pitch = ((width * bpp + FB_MASK) >> FB_SHIFT) * sizeof(FbBits);
@@ -57,7 +57,8 @@ static void FreeBuf(struct ARMSOCEXARec *exa, struct ARMSOCEXABuf * pBuf)
 
 static void Reattach(PixmapPtr pPixmap, int width, int height, int pitch)
 {
-	NULL_DBG_MSG("Reattach pixmap:%p", pPixmap);
+	xf86Msg(X_INFO, "Reattach pixmap:%p, %dx%d, pitch=%d\n",
+		pPixmap, width, height, pitch);
 }
 
 
@@ -95,7 +96,7 @@ static Bool CloseScreen(CLOSE_SCREEN_ARGS_DECL)
 	struct ARMSOCRec *pARMSOC = ARMSOCPTR(pScrn);
 
 	exaDriverFini(pScreen);
-	free(((struct ARMSOCNullEXARec *)pARMSOC->pARMSOCEXA)->exa);
+	free(((struct SoftExaRec_T *)pARMSOC->pARMSOCEXA)->exa);
 	free(pARMSOC->pARMSOCEXA);
 	pARMSOC->pARMSOCEXA = NULL;
 
@@ -113,9 +114,9 @@ static void FreeScreen(FREE_SCREEN_ARGS_DECL)
 
 struct ARMSOCEXARec * InitNullEXA(ScreenPtr pScreen, ScrnInfoPtr pScrn, int fd)
 {
-	struct ARMSOCNullEXARec *pSoftExa;
+	struct SoftExaRec_T *pSoftExa;
 
-	xf86DrvMsg(pScrn->scrnIndex, X_INFO, "Soft EXA mode enable \n");
+	xf86DrvMsg(pScrn->scrnIndex, X_INFO, "Soft EXA mode enable.\n");
 
 	pSoftExa = calloc(1, sizeof(*pSoftExa));
 	if ( NULL == pSoftExa )

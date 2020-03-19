@@ -57,6 +57,7 @@ loongson7a_drv_la_SOURCES = \
 	armsoc_dri3.c \
 	armsoc_present.c \
 	armsoc_xv.c \
+	loongson7a_module.c \
 	viv2d/queue.c \
 	viv2d/etnaviv_extra.c \
 	viv2d/viv2d_exa.c

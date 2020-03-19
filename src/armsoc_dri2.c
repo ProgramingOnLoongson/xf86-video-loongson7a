@@ -139,8 +139,7 @@ exchangebufs(DrawablePtr pDraw, DRI2BufferPtr a, DRI2BufferPtr b)
 	return TRUE;
 }
 
-static PixmapPtr
-createpix(DrawablePtr pDraw)
+static PixmapPtr createpix(DrawablePtr pDraw)
 {
 	ScreenPtr pScreen = pDraw->pScreen;
 	int flags = canflip(pDraw) ? ARMSOC_CREATE_PIXMAP_SCANOUT : CREATE_PIXMAP_USAGE_BACKING_PIXMAP;

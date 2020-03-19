@@ -128,7 +128,7 @@ struct ARMSOCRec {
 	/** record if ARMSOCDRI2ScreenInit() was successful */
 	Bool				dri2;
 	Bool				dri3;
-
+	Bool				present;
 	/** user-configurable option: */
 	Bool				NoFlip;
 	Bool 				SoftExa;
@@ -176,12 +176,12 @@ struct ARMSOCRec {
 	 * driNumBufs if early display enabled, otherwise driNumBufs-1 */
 	unsigned int                       swap_chain_size;
 
-	/* The first CreatePixmap after ScreenInit ends up being the
-	 * scanout, but we don't get any usage hint indicating that it should
+	/* The first CreatePixmap after ScreenInit ends up being the scanout,
+	 * but we don't get any usage hint indicating that it should
 	 * be accelerated. Use a flag to detect this and act accordingly. */
 	Bool				created_scanout_pixmap;
 
-	XF86VideoAdaptorPtr textureAdaptor;	
+	XF86VideoAdaptorPtr textureAdaptor;
 };
 
 /*
@@ -256,7 +256,8 @@ void ARMSOCVideoCloseScreen(ScreenPtr pScreen);
 
 // Present
 Bool LS7A_PresentScreenInit(ScreenPtr screen);
-
+void LS7A_SetupScrnHooks(ScrnInfoPtr pScrn);
+Bool LS7A_Probe(DriverPtr drv, int flags);
 // DRI3
 Bool ARMSOCDRI3ScreenInit(ScreenPtr pScreen);
 
