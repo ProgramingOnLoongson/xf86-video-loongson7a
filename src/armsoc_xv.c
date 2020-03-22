@@ -588,8 +588,7 @@ Bool ARMSOCVideoScreenInit(ScreenPtr pScreen)
 {
 	ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum];
 	struct ARMSOCRec * pARMSOC = ARMSOCPTR(pScrn);
-	XF86VideoAdaptorPtr textureAdaptor =
-	    ARMSOCVideoSetupTexturedVideo(pScreen);
+	XF86VideoAdaptorPtr textureAdaptor = ARMSOCVideoSetupTexturedVideo(pScreen);
 
 	if (textureAdaptor) {
 		XF86VideoAdaptorPtr *adaptors, *newAdaptors;

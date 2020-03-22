@@ -1,5 +1,3 @@
-/* -*- mode: C; c-file-style: "k&r"; tab-width 4; indent-tabs-mode: t; -*- */
-
 /*
  * Copyright © 2011 Texas Instruments, Inc
  * Copyright © 2020 LOONGSON, Inc
@@ -95,9 +93,6 @@ static void ARMSOCLeaveVT(VT_FUNC_ARGS_DECL);
 static void ARMSOCFreeScreen(FREE_SCREEN_ARGS_DECL);
 
 
-
-
-
 /**
  * Helper functions for sharing a DRM connection across screens.
  */
@@ -143,83 +138,83 @@ static int LS7A_InitPlaneForCursor(int drm_fd, uint32_t plane_id)
 
 
 static struct drmmode_interface loongson7a_interface = {
-	/* Must match name used in the kernel driver */
-	.driver_name = "loongson-drm",
-	/* DRM page flip events should be requested and waited for 
-	 * during DRM_IOCTL_MODE_PAGE_FLIP. */
-	.use_page_flip_events = 1,
-	/* allows the next back buffer to be obtained while 
-	 * the previous is being flipped. */
-	.use_early_display = 1,
-	.cursor_width = CURSORW,
-	.cursor_height = CURSORH,
-	.cursor_padding = CURSORPAD,
-	/* No hardware cursor - use a software cursor */
-	.cursor_api = HWCURSOR_API_NONE,
-	.init_plane_for_cursor = LS7A_InitPlaneForCursor,
-	.vblank_query_supported = 0,
+    /* Must match name used in the kernel driver */
+    .driver_name = "loongson-drm",
+    /* DRM page flip events should be requested and waited for
+     * during DRM_IOCTL_MODE_PAGE_FLIP. */
+    .use_page_flip_events = 1,
+    /* allows the next back buffer to be obtained while
+     * the previous is being flipped. */
+    .use_early_display = 1,
+    .cursor_width = CURSORW,
+    .cursor_height = CURSORH,
+    .cursor_padding = CURSORPAD,
+    /* No hardware cursor - use a software cursor */
+    .cursor_api = HWCURSOR_API_NONE,
+    .init_plane_for_cursor = LS7A_InitPlaneForCursor,
+    .vblank_query_supported = 0,
 };
 
 
 static int ARMSOCSetDRMMaster(void)
 {
-	int ret = 0;
+    int ret = 0;
 
-	assert(connection.fd >= 0);
+    assert(connection.fd >= 0);
 
-	if (!connection.master_count)
-		ret = drmSetMaster(connection.fd);
+    if (!connection.master_count)
+        ret = drmSetMaster(connection.fd);
 
-	if (!ret)
-		connection.master_count++;
+    if (!ret)
+        connection.master_count++;
 
-	return ret;
+    return ret;
 }
 
 static int ARMSOCDropDRMMaster(void)
 {
-	int ret = 0;
+    int ret = 0;
 
-	assert(connection.fd >= 0);
-	assert(connection.master_count > 0);
+    assert(connection.fd >= 0);
+    assert(connection.master_count > 0);
 
-	if (1 == connection.master_count)
-		ret = drmDropMaster(connection.fd);
+    if (1 == connection.master_count)
+        ret = drmDropMaster(connection.fd);
 
-	if (!ret)
-		connection.master_count--;
+    if (!ret)
+        connection.master_count--;
 
-	return ret;
+    return ret;
 }
 
 
 static void ShowDriverInfo(int fd)
 {
-	char *bus_id;
-	drmVersionPtr version;
-	char *deviceName;
+    char *bus_id;
+    drmVersionPtr version;
+    char *deviceName;
 
-	EARLY_INFO_MSG("Opened DRM");
-	deviceName = drmGetDeviceNameFromFd(fd);
-	EARLY_INFO_MSG("DeviceName is [%s]", deviceName ? deviceName : "NULL");
-	drmFree(deviceName);
-	
-	bus_id = drmGetBusid(fd);
+    xf86Msg(X_INFO, "fd %d Opened\n", fd);
+    deviceName = drmGetDeviceNameFromFd(fd);
+    xf86Msg(X_INFO, "DeviceName is [%s]\n", deviceName ? deviceName : "NULL");
+    drmFree(deviceName);
 
-	EARLY_INFO_MSG("bus_id is [%s]", bus_id ? bus_id : "NULL");
-	drmFreeBusid(bus_id);
-	version = drmGetVersion(fd);
-	if (version)
-	{
-		EARLY_INFO_MSG("DriverName is [%s]", version->name);
-		EARLY_INFO_MSG("version is [%d.%d.%d]", version->version_major, 
-			version->version_minor, version->version_patchlevel);
-		drmFreeVersion(version);
-	}
-	else
-	{
-		EARLY_INFO_MSG("version is [NULL]");
-	}
+    bus_id = drmGetBusid(fd);
+
+    xf86Msg(X_INFO, "bus_id is [%s]\n", bus_id ? bus_id : "NULL");
+    drmFreeBusid(bus_id);
+    version = drmGetVersion(fd);
+    if (version)
+    {
+        xf86Msg(X_INFO, "DriverName is [%s]\n", version->name);
+        xf86Msg(X_INFO, "version is [%d.%d.%d]\n", version->version_major,
+                version->version_minor, version->version_patchlevel);
+        drmFreeVersion(version);
+    }
+    else
+    {
+        xf86Msg(X_INFO, "version is [NULL]\n");
+    }
 }
 
 
@@ -230,9 +225,9 @@ static int OpenDRMCard(void)
 	if ((connection.bus_id) || (connection.driver_name))
 	{
 		/* user specified bus ID or driver name - pass to drmOpen */
-		EARLY_INFO_MSG("Opening driver [%s], bus_id [%s]",
-		               connection.driver_name ? connection.driver_name : "NULL",
-		               connection.bus_id ? connection.bus_id : "NULL");
+		xf86Msg(X_INFO, "Opening driver: %s, bus_id: %s \n",
+			connection.driver_name ? connection.driver_name : "NULL",
+			connection.bus_id ? connection.bus_id : "NULL");
 		fd = drmOpen(connection.driver_name, connection.bus_id);
 		if (fd < 0)
 			goto fail2;
@@ -247,13 +242,13 @@ static int OpenDRMCard(void)
 
 		if (connection.card_num)
 		{
-			snprintf(filename, sizeof(filename), "/dev/dri/card%d", card_num);
-			EARLY_INFO_MSG(
-			    "No BusID or DriverName specified - opening %s", filename);
+			snprintf(filename, sizeof(filename), "/dev/dri/card%d",
+				card_num);
+			xf86Msg(X_INFO, "Opening %s\n", filename);
 			fd = open(filename, O_RDWR | O_CLOEXEC, 0);
 		}
 		else
-		{				
+		{
 			fd = drmOpen(loongson7a_interface.driver_name, NULL);
 		}
 
@@ -326,8 +321,8 @@ static Bool ARMSOCOpenDRM(ScrnInfoPtr pScrn)
 		if (pARMSOC->drmFD < 0)
 			return FALSE;
 		/* Check that what we are or can become drm master by
-		 * attempting a drmSetInterfaceVersion(). If successful
-		 * this leaves us as master.
+         * attempting a drmSetInterfaceVersion().
+         * If successful this leaves us as master.
 		 * (see DRIOpenDRMMaster() in DRI1)
 		 */
 		sv.drm_di_major = 1;
@@ -364,7 +359,8 @@ static void ARMSOCCloseDRM(ScrnInfoPtr pScrn)
 {
 	struct ARMSOCRec *pARMSOC = ARMSOCPTR(pScrn);
 
-	if (pARMSOC && (pARMSOC->drmFD >= 0)) {
+	if (pARMSOC && (pARMSOC->drmFD >= 0))
+	{
 		drmFree(pARMSOC->deviceName);
 		connection.open_count--;
 		if (!connection.open_count) {
@@ -511,22 +507,6 @@ exit:
 		close(fd);
 
 	return ret;
-}
-
-
-void LS7A_SetupScrnHooks(ScrnInfoPtr pScrn)
-{
-	pScrn->driverVersion = 1;
-	pScrn->driverName    = LOONGSON7A_DRIVER_NAME;
-	pScrn->name          = LOONGSON7A_DRIVER_NAME;
-	pScrn->Probe         = NULL;
-	pScrn->PreInit       = ARMSOCPreInit;
-	pScrn->ScreenInit    = ARMSOCScreenInit;
-	pScrn->SwitchMode    = ARMSOCSwitchMode;
-	pScrn->AdjustFrame   = ARMSOCAdjustFrame;
-	pScrn->EnterVT       = ARMSOCEnterVT;
-	pScrn->LeaveVT       = ARMSOCLeaveVT;
-	pScrn->FreeScreen    = ARMSOCFreeScreen;
 }
 
 
@@ -702,6 +682,89 @@ fail:
 }
 
 
+void LS7A_SetupScrnHooks(ScrnInfoPtr pScrn)
+{
+    pScrn->driverVersion = 1;
+    pScrn->driverName    = LOONGSON7A_DRIVER_NAME;
+    pScrn->name          = LOONGSON7A_DRIVER_NAME;
+    pScrn->Probe         = NULL;
+    pScrn->PreInit       = ARMSOCPreInit;
+    pScrn->ScreenInit    = ARMSOCScreenInit;
+    pScrn->SwitchMode    = ARMSOCSwitchMode;
+    pScrn->AdjustFrame   = ARMSOCAdjustFrame;
+    pScrn->EnterVT       = ARMSOCEnterVT;
+    pScrn->LeaveVT       = ARMSOCLeaveVT;
+    pScrn->FreeScreen    = ARMSOCFreeScreen;
+}
+
+
+
+void LS7A_ProcessOptions( GDevPtr devSections)
+{
+    xf86Msg(X_WARNING, "Option DriverName ignored (BusID is specified) \n");
+    if (devSections)
+    {
+        const char *busIdStr;
+        const char *driverNameStr;
+        const char *cardNumStr;
+
+        /* get the Bus ID */
+        busIdStr = xf86FindOptionValue( devSections->options, "BusID");
+
+        /* get the DriverName */
+        driverNameStr = xf86FindOptionValue( devSections->options, "DriverName");
+
+        /* get the card_num from xorg.conf if present */
+        cardNumStr = xf86FindOptionValue( devSections->options, "DRICard");
+
+        if (busIdStr && driverNameStr)
+        {
+            xf86Msg(X_WARNING, "Option DriverName ignored (BusID is specified) \n");
+        }
+
+        if (busIdStr || driverNameStr)
+        {
+            if (cardNumStr)
+            {
+                xf86Msg(X_WARNING, "Option DRICard ignored" \
+                        "(BusID or DriverName are specified )\n" );
+            }
+        }
+
+        if (busIdStr)
+        {
+            if (0 == strlen(busIdStr))
+            {
+                xf86Msg(X_ERROR, "Missing value for Option BusID");
+                return;
+            }
+            connection.bus_id = busIdStr;
+        }
+        else if (driverNameStr)
+        {
+            if (0 == strlen(driverNameStr))
+            {
+                xf86Msg(X_ERROR, "Missing value for Option DriverName");
+                return;
+            }
+            connection.driver_name = driverNameStr;
+        }
+        else if (cardNumStr)
+        {
+            char *endptr;
+            errno = 0;
+            connection.card_num = strtol(cardNumStr, &endptr, 10);
+            if (('\0' == *cardNumStr) || ('\0' != *endptr) ||
+                    (errno != 0))
+            {
+                xf86Msg(X_ERROR, "Bad Option DRICard value : %s", cardNumStr);
+                return;
+            }
+        }
+    }
+
+}
+
 
 /**
  * The driver's Probe() function.  This function finds all instances of
@@ -743,61 +806,8 @@ Bool LS7A_Probe(DriverPtr drv, int flags)
 	{
 		int fd;
 
-		if (devSections)
-		{
-			const char *busIdStr;
-			const char *driverNameStr;
-			const char *cardNumStr;
+		LS7A_ProcessOptions(devSections[i]);
 
-			/* get the Bus ID */
-			busIdStr = xf86FindOptionValue( devSections[i]->options, "BusID");
-
-			/* get the DriverName */
-			driverNameStr = xf86FindOptionValue( devSections[i]->options, "DriverName");
-
-			/* get the card_num from xorg.conf if present */
-			cardNumStr = xf86FindOptionValue( devSections[i]->options, "DRICard");
-
-			if (busIdStr && driverNameStr) {
-				EARLY_WARNING_MSG(
-				    "Option DriverName ignored (BusID is specified)");
-			}
-			if (busIdStr || driverNameStr) {
-				if (cardNumStr) {
-					EARLY_WARNING_MSG(
-					    "Option DRICard ignored (BusID or DriverName are specified)");
-				}
-			}
-
-			if (busIdStr)
-			{
-				if (0 == strlen(busIdStr))
-				{
-					EARLY_ERROR_MSG( "Missing value for Option BusID");
-					return FALSE;
-				}
-				connection.bus_id = busIdStr;
-			}
-			else if (driverNameStr)
-			{
-				if (0 == strlen(driverNameStr)) {
-					EARLY_ERROR_MSG( "Missing value for Option DriverName");
-					return FALSE;
-				}
-				connection.driver_name = driverNameStr;
-			}
-			else if (cardNumStr)
-			{
-				char *endptr;
-				errno = 0;
-				connection.card_num = strtol(cardNumStr, &endptr, 10);
-				if (('\0' == *cardNumStr) || ('\0' != *endptr) ||
-				        (errno != 0)) {
-					EARLY_ERROR_MSG( "Bad Option DRICard value : %s", cardNumStr);
-					return FALSE;
-				}
-			}
-		}
 		fd = OpenDRMCard();
 		if (fd >= 0) {
 			struct ARMSOCRec *pARMSOC;
@@ -871,32 +881,33 @@ out:
  */
 static void LS7A_AccelInit(ScreenPtr pScreen)
 {
-	ScrnInfoPtr pScrn = xf86ScreenToScrn(pScreen);
-	struct ARMSOCRec *pARMSOC = ARMSOCPTR(pScrn);
+    ScrnInfoPtr pScrn = xf86ScreenToScrn(pScreen);
+    struct ARMSOCRec *pARMSOC = ARMSOCPTR(pScrn);
 
-	if ((0 == pARMSOC->SoftExa) && (NULL == pARMSOC->pARMSOCEXA))
-	{
-		pARMSOC->pARMSOCEXA = InitViv2DEXA(pScreen, pScrn, pARMSOC->drmFD);
-	}
+    if ((0 == pARMSOC->SoftExa) && (NULL == pARMSOC->pARMSOCEXA))
+    {
+        pARMSOC->pARMSOCEXA = InitViv2DEXA(pScreen, pScrn, pARMSOC->drmFD);
+    }
 
-	// Fall back to soft EXA
-	if ( (1 == pARMSOC->SoftExa) && (NULL == pARMSOC->pARMSOCEXA) )
-	{
-		pARMSOC->pARMSOCEXA = InitNullEXA(pScreen, pScrn, pARMSOC->drmFD);
-	}
+    // Fall back to soft EXA
+    if ( (1 == pARMSOC->SoftExa) && (NULL == pARMSOC->pARMSOCEXA) )
+    {
+        pARMSOC->pARMSOCEXA = InitNullEXA(pScreen, pScrn, pARMSOC->drmFD);
+    }
 
-	if (pARMSOC->pARMSOCEXA)
-	{
-		pARMSOC->dri2 = ARMSOCDRI2ScreenInit(pScreen); // DRI2
-		pARMSOC->dri3 = ARMSOCDRI3ScreenInit(pScreen); // DRI3
-		pARMSOC->present = LS7A_PresentScreenInit(pScreen); // Present
-		ARMSOCVideoScreenInit(pScreen); // XV
-	}
-	else
-	{
-		pARMSOC->dri2 = FALSE;
-		pARMSOC->dri3 = FALSE;
-	}
+    if (pARMSOC->pARMSOCEXA)
+    {
+        pARMSOC->dri2 = ARMSOCDRI2ScreenInit(pScreen); // DRI2
+        pARMSOC->dri3 = ARMSOCDRI3ScreenInit(pScreen); // DRI3
+        pARMSOC->present = LS7A_PresentScreenInit(pScreen); // Present
+        ARMSOCVideoScreenInit(pScreen); // XV
+    }
+    else
+    {
+        pARMSOC->dri2 = FALSE;
+        pARMSOC->dri3 = FALSE;
+        pARMSOC->present = FALSE;
+    }
 }
 
 /**
@@ -906,257 +917,257 @@ static void LS7A_AccelInit(ScreenPtr pScreen)
  */
 static Bool ARMSOCScreenInit(SCREEN_INIT_ARGS_DECL)
 {
-	ScrnInfoPtr pScrn = xf86ScreenToScrn(pScreen);
+    ScrnInfoPtr pScrn = xf86ScreenToScrn(pScreen);
 #ifndef XF86_SCRN_INTERFACE
-	int scrnIndex = pScrn->scrnIndex;
+    int scrnIndex = pScrn->scrnIndex;
 #endif
-	struct ARMSOCRec *pARMSOC = ARMSOCPTR(pScrn);
-	VisualPtr visual;
-	xf86CrtcConfigPtr xf86_config;
-	int j;
-	const char *fbdev;
-	int depth;
+    struct ARMSOCRec *pARMSOC = ARMSOCPTR(pScrn);
+    VisualPtr visual;
+    xf86CrtcConfigPtr xf86_config;
+    int j;
+    const char *fbdev;
+    int depth;
 
-	TRACE_ENTER();
+    TRACE_ENTER();
 
-	pARMSOC->created_scanout_pixmap = FALSE;
+    pARMSOC->created_scanout_pixmap = FALSE;
 
-	/* set drm master before allocating scanout buffer */
-	if (ARMSOCSetDRMMaster()) {
-		ERROR_MSG("Cannot Set DRM master: %s", strerror(errno));
-		goto fail;
-	}
+    /* set drm master before allocating scanout buffer */
+    if (ARMSOCSetDRMMaster()) {
+        ERROR_MSG("Cannot Set DRM master: %s", strerror(errno));
+        goto fail;
+    }
 
-	/* We create a single visual with the depth set to the
-	 * screen's bpp as otherwise XComposite will add an alternate
-	 * visual and ARGB8888 windows will be implicitly redirected.
-	 * The initial scanout buffer is created with the same depth
-	 * to match the visual.
-	 */
-	// Not sure about that
-	//	depth = pScrn->bitsPerPixel;
-	depth = pScrn->depth;
+    /* We create a single visual with the depth set to the
+     * screen's bpp as otherwise XComposite will add an alternate
+     * visual and ARGB8888 windows will be implicitly redirected.
+     * The initial scanout buffer is created with the same depth
+     * to match the visual.
+     */
+    // Not sure about that
+    //	depth = pScrn->bitsPerPixel;
+    depth = pScrn->depth;
 
-	/* Allocate initial scanout buffer.*/
-	DEBUG_MSG("allocating new scanout buffer: %dx%d %d %d",
-	          pScrn->virtualX, pScrn->virtualY,
-	          depth, pScrn->bitsPerPixel);
-	assert(!pARMSOC->scanout);
-	/* Screen creates and takes a ref on the scanout bo */
-	pARMSOC->scanout = armsoc_bo_new_with_dim(pARMSOC->dev, pScrn->virtualX,
-	                   pScrn->virtualY, depth, pScrn->bitsPerPixel,
-	                   ARMSOC_BO_SCANOUT);
-	if (!pARMSOC->scanout) {
-		ERROR_MSG("Cannot allocate scanout buffer\n");
-		goto fail1;
-	}
-	pScrn->displayWidth = armsoc_bo_pitch(pARMSOC->scanout) /
-	                      ((pScrn->bitsPerPixel + 7) / 8);
-	xf86_config = XF86_CRTC_CONFIG_PTR(pScrn);
+    /* Allocate initial scanout buffer.*/
+    DEBUG_MSG("allocating new scanout buffer: %dx%d %d %d",
+            pScrn->virtualX, pScrn->virtualY,
+            depth, pScrn->bitsPerPixel);
+    assert(!pARMSOC->scanout);
+    /* Screen creates and takes a ref on the scanout bo */
+    pARMSOC->scanout = armsoc_bo_new_with_dim(pARMSOC->dev, pScrn->virtualX,
+            pScrn->virtualY, depth, pScrn->bitsPerPixel,
+            ARMSOC_BO_SCANOUT);
+    if (!pARMSOC->scanout) {
+        ERROR_MSG("Cannot allocate scanout buffer\n");
+        goto fail1;
+    }
+    pScrn->displayWidth = armsoc_bo_pitch(pARMSOC->scanout) /
+        ((pScrn->bitsPerPixel + 7) / 8);
+    xf86_config = XF86_CRTC_CONFIG_PTR(pScrn);
 
-	/* need to point to new screen on server regeneration */
-	for (j = 0; j < xf86_config->num_crtc; j++)
-		xf86_config->crtc[j]->scrn = pScrn;
-	for (j = 0; j < xf86_config->num_output; j++)
-		xf86_config->output[j]->scrn = pScrn;
+    /* need to point to new screen on server regeneration */
+    for (j = 0; j < xf86_config->num_crtc; j++)
+        xf86_config->crtc[j]->scrn = pScrn;
+    for (j = 0; j < xf86_config->num_output; j++)
+        xf86_config->output[j]->scrn = pScrn;
 
-	/*
-	 * The next step is to setup the screen's visuals, and initialize the
-	 * framebuffer code.  In cases where the framebuffer's default
-	 * choices for things like visual layouts and bits per RGB are OK,
-	 * this may be as simple as calling the framebuffer's ScreenInit()
-	 * function.  If not, the visuals will need to be setup before calling
-	 * a fb ScreenInit() function and fixed up after.
-	 *
-	 * For most PC hardware at depths >= 8, the defaults that fb uses
-	 * are not appropriate.  In this driver, we fixup the visuals after.
-	 */
+    /*
+     * The next step is to setup the screen's visuals, and initialize the
+     * framebuffer code.  In cases where the framebuffer's default
+     * choices for things like visual layouts and bits per RGB are OK,
+     * this may be as simple as calling the framebuffer's ScreenInit()
+     * function.  If not, the visuals will need to be setup before calling
+     * a fb ScreenInit() function and fixed up after.
+     *
+     * For most PC hardware at depths >= 8, the defaults that fb uses
+     * are not appropriate.  In this driver, we fixup the visuals after.
+     */
 
-	/* Reset the visual list. */
-	miClearVisualTypes();
+    /* Reset the visual list. */
+    miClearVisualTypes();
 
-	if (!miSetVisualTypes(depth,
-	                      miGetDefaultVisualMask(depth),
-	                      pScrn->rgbBits, pScrn->defaultVisual)) {
-		ERROR_MSG(
-		    "Cannot initialize the visual type for %d depth, %d bits per pixel!",
-		    depth,
-		    pScrn->bitsPerPixel);
-		goto fail2;
-	}
+    if (!miSetVisualTypes(depth,
+                miGetDefaultVisualMask(depth),
+                pScrn->rgbBits, pScrn->defaultVisual)) {
+        ERROR_MSG(
+                "Cannot initialize the visual type for %d depth, %d bits per pixel!",
+                depth,
+                pScrn->bitsPerPixel);
+        goto fail2;
+    }
 
-	if (!miSetPixmapDepths()) {
-		ERROR_MSG("Cannot initialize the pixmap depth!");
-		goto fail3;
-	}
+    if (!miSetPixmapDepths()) {
+        ERROR_MSG("Cannot initialize the pixmap depth!");
+        goto fail3;
+    }
 
-	/* Initialize some generic 2D drawing functions: */
-	if (!fbScreenInit(pScreen, armsoc_bo_map(pARMSOC->scanout),
-	                  pScrn->virtualX, pScrn->virtualY,
-	                  pScrn->xDpi, pScrn->yDpi, pScrn->displayWidth,
-	                  pScrn->bitsPerPixel)) {
-		ERROR_MSG("fbScreenInit() failed!");
-		goto fail3;
-	}
+    /* Initialize some generic 2D drawing functions: */
+    if (!fbScreenInit(pScreen, armsoc_bo_map(pARMSOC->scanout),
+                pScrn->virtualX, pScrn->virtualY,
+                pScrn->xDpi, pScrn->yDpi, pScrn->displayWidth,
+                pScrn->bitsPerPixel)) {
+        ERROR_MSG("fbScreenInit() failed!");
+        goto fail3;
+    }
 
-	/* Fixup RGB ordering: */
-	visual = pScreen->visuals + pScreen->numVisuals;
-	while (--visual >= pScreen->visuals) {
-		if ((visual->class | DynamicClass) == DirectColor) {
-			visual->offsetRed = pScrn->offset.red;
-			visual->offsetGreen = pScrn->offset.green;
-			visual->offsetBlue = pScrn->offset.blue;
-			visual->redMask = pScrn->mask.red;
-			visual->greenMask = pScrn->mask.green;
-			visual->blueMask = pScrn->mask.blue;
-			visual->bitsPerRGBValue = pScrn->rgbBits;
-			visual->ColormapEntries = 1 << pScrn->rgbBits;
-		}
-	}
+    /* Fixup RGB ordering: */
+    visual = pScreen->visuals + pScreen->numVisuals;
+    while (--visual >= pScreen->visuals) {
+        if ((visual->class | DynamicClass) == DirectColor) {
+            visual->offsetRed = pScrn->offset.red;
+            visual->offsetGreen = pScrn->offset.green;
+            visual->offsetBlue = pScrn->offset.blue;
+            visual->redMask = pScrn->mask.red;
+            visual->greenMask = pScrn->mask.green;
+            visual->blueMask = pScrn->mask.blue;
+            visual->bitsPerRGBValue = pScrn->rgbBits;
+            visual->ColormapEntries = 1 << pScrn->rgbBits;
+        }
+    }
 
-	/* Continue initializing the generic 2D drawing functions after
-	 * fixing the RGB ordering:
-	 */
-	if (!fbPictureInit(pScreen, NULL, 0)) {
-		ERROR_MSG("fbPictureInit() failed!");
-		goto fail4;
-	}
+    /* Continue initializing the generic 2D drawing functions after
+     * fixing the RGB ordering:
+     */
+    if (!fbPictureInit(pScreen, NULL, 0)) {
+        ERROR_MSG("fbPictureInit() failed!");
+        goto fail4;
+    }
 
-	/* Set the initial black & white colormap indices: */
-	xf86SetBlackWhitePixels(pScreen);
+    /* Set the initial black & white colormap indices: */
+    xf86SetBlackWhitePixels(pScreen);
 
-	/* Initialize external sub-modules for EXA now, this has to be before
-	 * miDCInitialize() otherwise stacking order for wrapped ScreenPtr fxns
-	 * ends up in the wrong order.
-	 */
-	LS7A_AccelInit(pScreen);
+    /* Initialize external sub-modules for EXA now, this has to be before
+     * miDCInitialize() otherwise stacking order for wrapped ScreenPtr fxns
+     * ends up in the wrong order.
+     */
+    LS7A_AccelInit(pScreen);
 
-	/* Initialize backing store: */
-	xf86SetBackingStore(pScreen);
-/*
-	fbdev = xf86GetOptValString(pARMSOC->pOptionInfo, OPTION_INIT_FROM_FBDEV);
-	if (fbdev && *fbdev != '\0')
-	{
-		if (ARMSOCCopyFB(pScrn, fbdev))
-		{
-			// Only allow None BG root if we initialized the scanout buffer
-			pScreen->canDoBGNoneRoot = TRUE;
-		}
-	}
-*/
-	/* Enable cursor position updates by mouse signal handler: */
-	xf86SetSilkenMouse(pScreen);
+    /* Initialize backing store: */
+    xf86SetBackingStore(pScreen);
+    /*
+       fbdev = xf86GetOptValString(pARMSOC->pOptionInfo, OPTION_INIT_FROM_FBDEV);
+       if (fbdev && *fbdev != '\0')
+       {
+       if (ARMSOCCopyFB(pScrn, fbdev))
+       {
+    // Only allow None BG root if we initialized the scanout buffer
+    pScreen->canDoBGNoneRoot = TRUE;
+    }
+    }
+    */
+    /* Enable cursor position updates by mouse signal handler: */
+    xf86SetSilkenMouse(pScreen);
 
-	/* Initialize the cursor: */
-	if (!miDCInitialize(pScreen, xf86GetPointerScreenFuncs())) {
-		ERROR_MSG("miDCInitialize() failed!");
-		goto fail5;
-	}
+    /* Initialize the cursor: */
+    if (!miDCInitialize(pScreen, xf86GetPointerScreenFuncs())) {
+        ERROR_MSG("miDCInitialize() failed!");
+        goto fail5;
+    }
 
-	/* ignore failures here as we will fall back to software cursor */
-	if( !drmmode_cursor_init(pScreen) )
-	{
-		xf86DrvMsg(pScrn->scrnIndex, X_INFO, " Software cursor initialized.\n");
-	}
+    /* ignore failures here as we will fall back to software cursor */
+    if( !drmmode_cursor_init(pScreen) )
+    {
+        xf86DrvMsg(pScrn->scrnIndex, X_INFO, " Software cursor initialized.\n");
+    }
 
-	/* TODO: MIDEGL-1458: Is this the right place for this?
-	 * The Intel i830 driver says:
-	 * "Must force it before EnterVT, so we are in control of VT..."
-	 */
-	pScrn->vtSema = TRUE;
+    /* TODO: MIDEGL-1458: Is this the right place for this?
+     * The Intel i830 driver says:
+     * "Must force it before EnterVT, so we are in control of VT..."
+     */
+    pScrn->vtSema = TRUE;
 
-	/* Take over the virtual terminal from the console, set the
-	 * desired mode, etc.:
-	 */
-	if (!ARMSOCEnterVT(VT_FUNC_ARGS(0))) {
-		ERROR_MSG("ARMSOCEnterVT() failed!");
-		goto fail6;
-	}
+    /* Take over the virtual terminal from the console, set the
+     * desired mode, etc.:
+     */
+    if (!ARMSOCEnterVT(VT_FUNC_ARGS(0))) {
+        ERROR_MSG("ARMSOCEnterVT() failed!");
+        goto fail6;
+    }
 
-	/* Do some XRandR initialization. Return value is not useful */
-	(void)xf86CrtcScreenInit(pScreen);
+    /* Do some XRandR initialization. Return value is not useful */
+    (void)xf86CrtcScreenInit(pScreen);
 
-	if (!miCreateDefColormap(pScreen)) {
-		ERROR_MSG("Cannot create colormap!");
-		goto fail7;
-	}
+    if (!miCreateDefColormap(pScreen)) {
+        ERROR_MSG("Cannot create colormap!");
+        goto fail7;
+    }
 
-	if (!xf86HandleColormaps(pScreen, 1 << pScrn->rgbBits, pScrn->rgbBits,
-	                         LoadPalette, NULL, CMAP_PALETTED_TRUECOLOR))
-	{
-		ERROR_MSG("xf86HandleColormaps() failed!");
-		goto fail8;
-	}
+    if (!xf86HandleColormaps(pScreen, 1 << pScrn->rgbBits, pScrn->rgbBits,
+                LoadPalette, NULL, CMAP_PALETTED_TRUECOLOR))
+    {
+        ERROR_MSG("xf86HandleColormaps() failed!");
+        goto fail8;
+    }
 
-	/* Setup power management: */
-	xf86DPMSInit(pScreen, xf86DPMSSet, 0);
+    /* Setup power management: */
+    xf86DPMSInit(pScreen, xf86DPMSSet, 0);
 
-	pScreen->SaveScreen = xf86SaveScreen;
+    pScreen->SaveScreen = xf86SaveScreen;
 
-	/* Wrap some screen functions: */
-	wrap(pARMSOC, pScreen, CloseScreen, ARMSOCCloseScreen);
-	wrap(pARMSOC, pScreen, CreateScreenResources,
-	     ARMSOCCreateScreenResources);
-	wrap(pARMSOC, pScreen, BlockHandler, ARMSOCBlockHandler);
-	drmmode_screen_init(pScrn);
+    /* Wrap some screen functions: */
+    wrap(pARMSOC, pScreen, CloseScreen, ARMSOCCloseScreen);
+    wrap(pARMSOC, pScreen, CreateScreenResources,
+            ARMSOCCreateScreenResources);
+    wrap(pARMSOC, pScreen, BlockHandler, ARMSOCBlockHandler);
+    drmmode_screen_init(pScrn);
 
-	TRACE_EXIT();
-	return TRUE;
+    TRACE_EXIT();
+    return TRUE;
 
-	/* cleanup on failures */
+    /* cleanup on failures */
 fail8:
-	/* uninstall the default colormap */
-	miUninstallColormap(GetInstalledmiColormap(pScreen));
+    /* uninstall the default colormap */
+    miUninstallColormap(GetInstalledmiColormap(pScreen));
 
 fail7:
-	ARMSOCLeaveVT(VT_FUNC_ARGS(0));
-	pScrn->vtSema = FALSE;
+    ARMSOCLeaveVT(VT_FUNC_ARGS(0));
+    pScrn->vtSema = FALSE;
 
 fail6:
-	drmmode_cursor_fini(pScreen);
+    drmmode_cursor_fini(pScreen);
 
 fail5:
-	if (pARMSOC->dri2)
-		ARMSOCDRI2CloseScreen(pScreen);
+    if (pARMSOC->dri2)
+        ARMSOCDRI2CloseScreen(pScreen);
 
-	if (pARMSOC->pARMSOCEXA)
-		if (pARMSOC->pARMSOCEXA->CloseScreen)
-			pARMSOC->pARMSOCEXA->CloseScreen(CLOSE_SCREEN_ARGS);
+    if (pARMSOC->pARMSOCEXA)
+        if (pARMSOC->pARMSOCEXA->CloseScreen)
+            pARMSOC->pARMSOCEXA->CloseScreen(CLOSE_SCREEN_ARGS);
 fail4:
-	/* Call the CloseScreen functions for fbInitScreen,  miDCInitialize,
-	 * exaDriverInit & xf86CrtcScreenInit as appropriate via their
-	 * wrapped pointers.
-	 * exaDDXCloseScreen uses the XF86SCRNINFO macro so we must
-	 * set up the key for this before it gets called.
-	 */
-	dixSetPrivate(&pScreen->devPrivates, xf86ScreenKey, pScrn);
-	(*pScreen->CloseScreen)(CLOSE_SCREEN_ARGS);
+    /* Call the CloseScreen functions for fbInitScreen,  miDCInitialize,
+     * exaDriverInit & xf86CrtcScreenInit as appropriate via their
+     * wrapped pointers.
+     * exaDDXCloseScreen uses the XF86SCRNINFO macro so we must
+     * set up the key for this before it gets called.
+     */
+    dixSetPrivate(&pScreen->devPrivates, xf86ScreenKey, pScrn);
+    (*pScreen->CloseScreen)(CLOSE_SCREEN_ARGS);
 
 fail3:
-	/* reset the visual list */
-	miClearVisualTypes();
+    /* reset the visual list */
+    miClearVisualTypes();
 
 fail2:
-	/* Screen drops its ref on scanout bo on failure exit */
-	armsoc_bo_unreference(pARMSOC->scanout);
-	pARMSOC->scanout = NULL;
-	pScrn->displayWidth = 0;
+    /* Screen drops its ref on scanout bo on failure exit */
+    armsoc_bo_unreference(pARMSOC->scanout);
+    pARMSOC->scanout = NULL;
+    pScrn->displayWidth = 0;
 
 fail1:
-	/* drop drm master */
-	(void)drmDropMaster(pARMSOC->drmFD);
+    /* drop drm master */
+    (void)drmDropMaster(pARMSOC->drmFD);
 
 fail:
-	TRACE_EXIT();
-	return FALSE;
+    TRACE_EXIT();
+    return FALSE;
 }
 
 
 static void LoadPalette(ScrnInfoPtr pScrn, int numColors, int *indices,
                   LOCO *colors, VisualPtr pVisual)
 {
-	TRACE_ENTER();
-	TRACE_EXIT();
+    TRACE_ENTER();
+    TRACE_EXIT();
 }
 
 
@@ -1166,8 +1177,7 @@ static void LoadPalette(ScrnInfoPtr pScrn, int numColors, int *indices,
  * mapped memory regions), and free per-Screen data structures (except those
  * held by pScrn).
  */
-static Bool
-ARMSOCCloseScreen(CLOSE_SCREEN_ARGS_DECL)
+static Bool ARMSOCCloseScreen(CLOSE_SCREEN_ARGS_DECL)
 {
 	ScrnInfoPtr pScrn = xf86ScreenToScrn(pScreen);
 	struct ARMSOCRec *pARMSOC = ARMSOCPTR(pScrn);
@@ -1175,14 +1185,19 @@ ARMSOCCloseScreen(CLOSE_SCREEN_ARGS_DECL)
 
 	TRACE_ENTER();
 
-	drmmode_screen_fini(pScrn);
-	drmmode_cursor_fini(pScreen);
+    drmmode_screen_fini(pScrn);
+    drmmode_cursor_fini(pScreen);
 
-	/* pScreen->devPrivate holds the root pixmap created around our bo by miCreateResources which is installed
-	 * by fbScreenInit() when called from ARMSOCScreenInit().
-	 * This pixmap should be destroyed in miScreenClose() but this isn't wrapped by fbScreenInit() so to prevent a leak
-	 * we do it here, before calling the CloseScreen chain which would just free pScreen->devPrivate in fbCloseScreen()
-	 */
+    // pScreen->devPrivate holds the root pixmap created around our bo
+    // by miCreateResources which is installed by fbScreenInit()
+    // when called from ARMSOCScreenInit().
+    //
+    // This pixmap should be destroyed in miScreenClose() but this 
+    // isn't wrapped by fbScreenInit() so to prevent a leak
+    // we do it here, before calling the CloseScreen chain 
+    // which would just free pScreen->devPrivate in fbCloseScreen()
+    //
+
 	if (pScreen->devPrivate) {
 		// NOT: this make X segfault
 		// Xorg: ../../../../include/privates.h:122: dixGetPrivateAddr: Assertion `key->initialized' failed.
@@ -1226,8 +1241,7 @@ ARMSOCCloseScreen(CLOSE_SCREEN_ARGS_DECL)
  * have already been created, but the first EnterVT happens before
  * CreateScreenResources.
  */
-static Bool
-ARMSOCCreateScreenResources(ScreenPtr pScreen)
+static Bool ARMSOCCreateScreenResources(ScreenPtr pScreen)
 {
 	ScrnInfoPtr pScrn = xf86ScreenToScrn(pScreen);
 	struct ARMSOCRec *pARMSOC = ARMSOCPTR(pScrn);
@@ -1261,13 +1275,12 @@ static void ARMSOCBlockHandler(BLOCKHANDLER_ARGS_DECL)
 
 
 /**
- * The driver's SwitchMode() function.  Initialize the new mode for the
- * Screen.
+ * The driver's SwitchMode() function.  Initialize the new mode for the Screen.
  */
 static Bool ARMSOCSwitchMode(SWITCH_MODE_ARGS_DECL)
 {
-	SCRN_INFO_PTR(arg);
-	return xf86SetSingleMode(pScrn, mode, RR_Rotate_0);
+    SCRN_INFO_PTR(arg);
+    return xf86SetSingleMode(pScrn, mode, RR_Rotate_0);
 }
 
 
@@ -1279,8 +1292,8 @@ static Bool ARMSOCSwitchMode(SWITCH_MODE_ARGS_DECL)
  */
 static void ARMSOCAdjustFrame(ADJUST_FRAME_ARGS_DECL)
 {
-	SCRN_INFO_PTR(arg);
-	drmmode_adjust_frame(pScrn, x, y);
+    SCRN_INFO_PTR(arg);
+    drmmode_adjust_frame(pScrn, x, y);
 }
 
 
@@ -1297,7 +1310,7 @@ static Bool ARMSOCEnterVT(ScrnInfoPtr pScrn)
 
 	TRACE_ENTER();
 
-	for (i = 1; i < currentMaxClients; i++) {
+	for (i = 1; i < currentMaxClients; ++i) {
 		if (clients[i] && !clients[i]->clientGone)
 			AttendClient(clients[i]);
 	}
@@ -1324,8 +1337,7 @@ static Bool ARMSOCEnterVT(ScrnInfoPtr pScrn)
  * temporarily gives up the virtual terminal to the console.  As such, it may
  * need to restore the console's HW state.
  */
-static void
-ARMSOCLeaveVT(VT_FUNC_ARGS_DECL)
+static void ARMSOCLeaveVT(VT_FUNC_ARGS_DECL)
 {
 	SCRN_INFO_PTR(arg);
 	int i, ret;
@@ -1350,8 +1362,7 @@ ARMSOCLeaveVT(VT_FUNC_ARGS_DECL)
  * deleted by the common layer.
  * This function is not used in normal (error free) operation.
  */
-static void
-ARMSOCFreeScreen(FREE_SCREEN_ARGS_DECL)
+static void ARMSOCFreeScreen(FREE_SCREEN_ARGS_DECL)
 {
 	SCRN_INFO_PTR(arg);
 	struct ARMSOCRec *pARMSOC = ARMSOCPTR(pScrn);
@@ -1381,4 +1392,3 @@ ARMSOCFreeScreen(FREE_SCREEN_ARGS_DECL)
 
 	TRACE_EXIT();
 }
-

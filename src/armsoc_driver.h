@@ -126,19 +126,18 @@ struct ARMSOCRec {
 	struct ARMSOCEXARec * pARMSOCEXA;
 
 	/** record if ARMSOCDRI2ScreenInit() was successful */
-	Bool				dri2;
-	Bool				dri3;
-	Bool				present;
+	Bool dri2;
+	Bool dri3;
+	Bool present;
 	/** user-configurable option: */
-	Bool				NoFlip;
-	Bool 				SoftExa;
-	unsigned int			driNumBufs;
+	Bool NoFlip;
+	Bool SoftExa;
+	unsigned int driNumBufs;
 
 	/** File descriptor of the connection with the DRM. */
-	int					drmFD;
+	int drmFD;
 
-	char				*deviceName;
-
+	char * deviceName;
 	/** interface to hardware specific functionality */
 	struct drmmode_interface *drmmode_interface;
 
@@ -166,20 +165,19 @@ struct ARMSOCRec {
 	int					crtcNum;
 
 	/* The Swap Chain stores the pending swap operations */
-	struct ARMSOCDRISwapCmd            **swap_chain;
+	struct ARMSOCDRISwapCmd **swap_chain;
 
-	/* Count of swaps scheduled since startup.
-	 * Used as swap_id of the next swap cmd */
-	unsigned int                       swap_chain_count;
+	/* Count of swaps scheduled since startup. Used as swap_id of the next swap cmd */
+	unsigned int swap_chain_count;
 
 	/* Size of the swap chain. Set to 1 if DRI2SwapLimit unsupported,
 	 * driNumBufs if early display enabled, otherwise driNumBufs-1 */
-	unsigned int                       swap_chain_size;
+	unsigned int swap_chain_size;
 
 	/* The first CreatePixmap after ScreenInit ends up being the scanout,
 	 * but we don't get any usage hint indicating that it should
 	 * be accelerated. Use a flag to detect this and act accordingly. */
-	Bool				created_scanout_pixmap;
+	Bool created_scanout_pixmap;
 
 	XF86VideoAdaptorPtr textureAdaptor;
 };
