@@ -425,7 +425,7 @@ _X_EXPORT DriverRec Loongson7a = {
     .PciProbe = LS7A_PciProbe,
 #endif
 #ifdef XSERVER_PLATFORM_BUS
-    .platformProbe = LS7A_PlatformProbe,
+//    .platformProbe = LS7A_PlatformProbe,
 #endif
 };
 
