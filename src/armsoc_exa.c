@@ -490,9 +490,9 @@ _X_EXPORT Bool ARMSOCModifyPixmapHeader(PixmapPtr pPixmap, int width, int height
 	//  INFO_MSG(" pixmap:%p pix:%p %dx%d %d %d", 
 	//  pPixmap, priv, width, height, depth, bitsPerPixel);
 
-// 	if (IsDumbPixmap(priv, width * height * (bitsPerPixel / 8)))
-//		return ModifyDumbPixmapHeader(priv, pPixmap, width, height, depth, bitsPerPixel, pitch, pPixData);
-//	else
+ 	if (IsDumbPixmap(priv, width * height * (bitsPerPixel / 8)))
+		return ModifyDumbPixmapHeader(priv, pPixmap, width, height, depth, bitsPerPixel, pitch, pPixData);
+	else
 		return ModifyExaPixmapHeader(priv, pPixmap, width, height, depth, bitsPerPixel, pitch, pPixData);
 }
 
