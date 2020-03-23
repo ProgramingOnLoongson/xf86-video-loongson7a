@@ -46,7 +46,7 @@
 #include "armsoc_driver.h"
 #include "drmmode_display.h"
 
-#define ARMSOC_PRESENT_FLIP 1
+#define LOONGSON_PRESENT_FLIP 1
 #define LOONGSON_PRESENT_WAIT_VBLANK 1
 
 #define ARMSOC_PRESENT_DBG_MSG(fmt, ...)
@@ -508,45 +508,39 @@ armsoc_present_abort_vblank(RRCrtcPtr crtc, uint64_t event_id, uint64_t msc)
 	armsoc_drm_abort_event(scrn, event_id);
 }
 
+
+
+#if LOONGSON_PRESENT_FLIP
 /*
  * Flush our batch buffer when requested by the Present extension.
  */
 static void armsoc_present_flush(WindowPtr window)
 {
-#ifdef ARMSOC_PRESENT_FLIP
 	ScreenPtr screen = window->drawable.pScreen;
 	ScrnInfoPtr scrn = xf86ScreenToScrn(screen);
-//    modesettingPtr ms = modesettingPTR(scrn);
 	struct ARMSOCRec * pARMSOC = ARMSOCPTR(scrn);
 
 	ARMSOC_PRESENT_DBG_MSG("armsoc_present_flush");
-
-//    if (ms->drmmode.glamor)
-//      glamor_block_handler(screen);
-#endif
 }
 
-#ifdef ARMSOC_PRESENT_FLIP
 
 /**
  * Callback for the DRM event queue when a flip has completed on all pipes
  *
  * Notify the extension code
  */
-static void
-armsoc_present_flip_handler(struct ARMSOCRec * pARMSOC, uint64_t msc,
-                            uint64_t ust, void *data)
+static void armsoc_present_flip_handler(struct ARMSOCRec * pARMSOC, uint64_t msc,
+        uint64_t ust, void *data)
 {
-	struct armsoc_present_vblank_event *event = data;
+    struct armsoc_present_vblank_event *event = data;
 
-	ARMSOC_PRESENT_DBG_MSG("armsoc_present_flip_handler event_id:%llu msc:%llu ust:%llu\n",
-	                       (long long) event->event_id,
-	                       (long long) msc, (long long) ust);
+    ARMSOC_PRESENT_DBG_MSG("armsoc_present_flip_handler event_id:%llu msc:%llu ust:%llu\n",
+            (long long) event->event_id,  (long long) msc, (long long) ust);
 
-//    if (event->unflip)
-	//      ms->drmmode.present_flipping = FALSE;
+    //    if (event->unflip)
+    //      ms->drmmode.present_flipping = FALSE;
 
-	armsoc_present_vblank_handler(msc, ust, event);
+    armsoc_present_vblank_handler(msc, ust, event);
 }
 
 /*
@@ -705,10 +699,11 @@ static present_screen_info_rec armsoc_present_screen_info = {
 	.get_ust_msc = armsoc_present_get_ust_msc,
 	.queue_vblank = armsoc_present_queue_vblank,
 	.abort_vblank = armsoc_present_abort_vblank,
+#if LOONGSON_PRESENT_FLIP
 	.flush = armsoc_present_flush,
-
+#endif
 	.capabilities = PresentCapabilityNone,
-#ifdef ARMSOC_PRESENT_FLIP
+#if LOONGSON_PRESENT_FLIP
 	.check_flip = armsoc_present_check_flip,
 	.flip = armsoc_present_flip,
 	.unflip = armsoc_present_unflip,

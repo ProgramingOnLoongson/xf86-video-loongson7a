@@ -23,100 +23,104 @@
 
 static Bool LS7A_DRI3Authorise(struct ARMSOCRec *pARMSOC, int fd)
 {
-	int ret;
-	struct stat st;
-	drm_magic_t magic;
+    int ret;
+    struct stat st;
+    drm_magic_t magic;
 
-	if (fstat(fd, &st) || !S_ISCHR(st.st_mode))
-		return FALSE;
+    if (fstat(fd, &st) || !S_ISCHR(st.st_mode))
+        return FALSE;
 
-	/*
-	 * If the device is a render node, we don't need to auth it.
-	 * Render devices start at minor number 128 and up, though it
-	 * would be nice to have some other test for this.
-	 */
-	if (st.st_rdev & 0x80)
-		return TRUE;
+    /*
+     * If the device is a render node, we don't need to auth it.
+     * Render devices start at minor number 128 and up, though it
+     * would be nice to have some other test for this.
+     */
+    if (st.st_rdev & 0x80)
+        return TRUE;
 
-	ret = drmGetMagic(fd, &magic);
-	if (ret) {
-		EARLY_ERROR_MSG("cannot get magic : %d", ret);
-		return FALSE;
-	}
+    ret = drmGetMagic(fd, &magic);
+    if (ret) {
+        EARLY_ERROR_MSG("cannot get magic : %d", ret);
+        return FALSE;
+    }
 
-	ret = drmAuthMagic(pARMSOC->drmFD, magic);
-	if (ret) {
-		EARLY_ERROR_MSG("cannot auth magic : %d", ret);
-		return FALSE;
-	}
+    ret = drmAuthMagic(pARMSOC->drmFD, magic);
+    if (ret) {
+        EARLY_ERROR_MSG("cannot auth magic : %d", ret);
+        return FALSE;
+    }
 
-	return TRUE;
+    return TRUE;
 }
 
 static int LS7A_DRI3Open(ScreenPtr pScreen, RRProviderPtr provider, int *o)
 {
-	ScrnInfoPtr pScrn = xf86ScreenToScrn(pScreen);
-	struct ARMSOCRec *pARMSOC = (struct ARMSOCRec *)(pScrn->driverPrivate);
+    ScrnInfoPtr pScrn = xf86ScreenToScrn(pScreen);
+    struct ARMSOCRec *pARMSOC = (struct ARMSOCRec *)(pScrn->driverPrivate);
 
-	// int fd = drmOpen(pARMSOC->deviceName, NULL);
-	int fd = open(pARMSOC->deviceName, O_RDWR | O_CLOEXEC);
-	if (fd < 0) {
-		ERROR_MSG(" LS7A_DRI3Open: cannot open %s", pARMSOC->deviceName);
-		return BadAlloc;
-	}
-	else
-	{
-		xf86DrvMsg(pScrn->scrnIndex, X_INFO, "%s opened in %d\n",
-			pARMSOC->deviceName, fd);
-	}
+    // int fd = drmOpen(pARMSOC->deviceName, NULL);
+    // int fd = drmOpenRender(128);
+    int fd = open(pARMSOC->deviceName, O_RDWR | O_CLOEXEC);
 
-	if (!LS7A_DRI3Authorise(pARMSOC, fd)) {
-		ERROR_MSG(" cannot authorize %s : %d", pARMSOC->deviceName, fd);
-		close(fd);
-		return BadMatch;
-	}
+    if (fd < 0) {
+        ERROR_MSG(" DRI3: cannot open %s", pARMSOC->deviceName);
+        return BadAlloc;
+    }
+    else
+    {
+        xf86DrvMsg(pScrn->scrnIndex, X_INFO, "DRI3: %s opened in %d\n",
+                pARMSOC->deviceName, fd);
+    }
 
-	*o = fd;
+    if (!LS7A_DRI3Authorise(pARMSOC, fd)) {
+        ERROR_MSG(" DRI3: cannot authorize %s : %d", pARMSOC->deviceName, fd);
+        close(fd);
+        return BadMatch;
+    }
 
-	return Success;
+    *o = fd;
+
+    return Success;
 }
 
 static PixmapPtr LS7A_DRI3PixmapFromFD(ScreenPtr pScreen, int fd,
        CARD16 width, CARD16 height, CARD16 stride, CARD8 depth, CARD8 bpp)
 {
-	ScrnInfoPtr pScrn = xf86ScreenToScrn(pScreen);
-	struct ARMSOCRec *pARMSOC = ARMSOCPTR(pScrn);
-	PixmapPtr pixmap;
-	struct ARMSOCPixmapPrivRec *priv;
+    ScrnInfoPtr pScrn = xf86ScreenToScrn(pScreen);
+    struct ARMSOCRec *pARMSOC = (struct ARMSOCRec *) pScrn->driverPrivate;
 
-	pixmap = pScreen->CreatePixmap(pScreen, width, height, depth,
-		CREATE_PIXMAP_USAGE_BACKING_PIXMAP);
-	if (pixmap == NullPixmap) {
-		ERROR_MSG("cannot create pixmap");
-		return pixmap;
-	}
+    PixmapPtr pixmap;
+    struct ARMSOCPixmapPrivRec *priv;
 
-	pScreen->ModifyPixmapHeader(pixmap, width, height, depth, bpp, stride, NULL);
+    pixmap = pScreen->CreatePixmap(pScreen, width, height, depth,
+        CREATE_PIXMAP_USAGE_BACKING_PIXMAP);
+    if (pixmap == NullPixmap)
+    {
+        ERROR_MSG("cannot create pixmap");
+        return pixmap;
+    }
 
-	priv = exaGetPixmapDriverPrivate(pixmap);
+    pScreen->ModifyPixmapHeader(pixmap, width, height, depth, bpp, stride, NULL);
 
-	if (!priv || !priv->bo) {
-		ERROR_MSG("no privPix");
-		pScreen->DestroyPixmap(pixmap);
-		return NullPixmap;
-	}
+    priv = exaGetPixmapDriverPrivate(pixmap);
 
-	xf86DrvMsg(pScrn->scrnIndex, X_INFO,
-		"DRI3PixmapFromFD pixmap:%p pix:%p bo:%p %dx%d %d/%d %d->%d\n",
-		pixmap, priv, priv->bo, width, height, depth, bpp, stride,
-		pixmap->devKind);
+    if (!priv || !priv->bo) {
+        ERROR_MSG("no privPix");
+        pScreen->DestroyPixmap(pixmap);
+        return NullPixmap;
+    }
 
-	armsoc_bo_put_dmabuf(priv->bo, fd);
+    xf86DrvMsg(pScrn->scrnIndex, X_INFO,
+        "DRI3PixmapFromFD pixmap:%p pix:%p bo:%p %dx%d %d/%d %d->%d\n",
+        pixmap, priv, priv->bo, width, height, depth, bpp, stride,
+        pixmap->devKind);
 
-	if(pARMSOC->pARMSOCEXA->Reattach)
-		pARMSOC->pARMSOCEXA->Reattach(pixmap, width, height, stride);
+    armsoc_bo_put_dmabuf(priv->bo, fd);
 
-	return pixmap;
+    if(pARMSOC->pARMSOCEXA->Reattach)
+        pARMSOC->pARMSOCEXA->Reattach(pixmap, width, height, stride);
+
+    return pixmap;
 }
 
 static int LS7A_DRI3FDFromPixmap(ScreenPtr pScreen, PixmapPtr pixmap,
@@ -138,29 +142,29 @@ static int LS7A_DRI3FDFromPixmap(ScreenPtr pScreen, PixmapPtr pixmap,
 }
 
 static dri3_screen_info_rec armsoc_dri3_info = {
-	.version = 0,
-	.open = LS7A_DRI3Open,
-	.pixmap_from_fd = LS7A_DRI3PixmapFromFD,
-	.fd_from_pixmap = LS7A_DRI3FDFromPixmap,
+    .version = 0,
+    .open = LS7A_DRI3Open,
+    .pixmap_from_fd = LS7A_DRI3PixmapFromFD,
+    .fd_from_pixmap = LS7A_DRI3FDFromPixmap,
 };
 
 
 Bool ARMSOCDRI3ScreenInit(ScreenPtr pScreen)
 {
-	ScrnInfoPtr pScrn = xf86ScreenToScrn(pScreen);
-	struct ARMSOCRec *pARMSOC = ARMSOCPTR(pScrn);
-	struct stat st;
+    ScrnInfoPtr pScrn = xf86ScreenToScrn(pScreen);
+    struct ARMSOCRec *pARMSOC = ARMSOCPTR(pScrn);
+    struct stat st;
 
-	if (!pARMSOC)
-		return FALSE;
+    if (!pARMSOC)
+        return FALSE;
 
-	if (fstat(pARMSOC->drmFD, &st) || !S_ISCHR(st.st_mode))
-		return FALSE;
+    if (fstat(pARMSOC->drmFD, &st) || !S_ISCHR(st.st_mode))
+        return FALSE;
 
-	if (!miSyncShmScreenInit(pScreen))
-		return FALSE;
+    if (!miSyncShmScreenInit(pScreen))
+        return FALSE;
 
-	xf86DrvMsg(pScrn->scrnIndex, X_INFO, "DRI3 initialzed. \n");
+    xf86DrvMsg(pScrn->scrnIndex, X_INFO, "DRI3 initialzed. \n");
 
-	return dri3_screen_init(pScreen, &armsoc_dri3_info);
+    return dri3_screen_init(pScreen, &armsoc_dri3_info);
 }

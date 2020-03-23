@@ -671,7 +671,7 @@ Viv2DModifyPixmapHeader(PixmapPtr pPixmap, int width, int height,
 
 	VIV2D_DBG_MSG("Viv2DModifyPixmapHeader pix:%p %dx%d depth:%d bpp:%d pix_depth:%d pix_bpp:%d", pix, width, height, depth, bitsPerPixel, pPixmap->drawable.depth, pPixmap->drawable.bitsPerPixel);
 
-	if (ARMSOCModifyPixmapHeader(pPixmap, width, height, depth, bitsPerPixel, devKind, pPixData)) {
+	if (LS_ModifyPixmapHeader(pPixmap, width, height, depth, bitsPerPixel, devKind, pPixData)) {
 		if (armsocPix->bo && pPixData == armsoc_bo_map(pARMSOC->scanout) && pix->bo != v2d->bo) {
 			VIV2D_DBG_MSG("Viv2DModifyPixmapHeader pix bo scanout %p", pPixmap);
 			pix->width = armsoc_bo_width(pARMSOC->scanout);
@@ -2446,7 +2446,7 @@ InitViv2DEXA(ScreenPtr pScreen, ScrnInfoPtr pScrn, int fd)
 #else
 	exa->CreatePixmap2 = ARMSOCCreatePixmap2;
 	exa->DestroyPixmap = ARMSOCDestroyPixmap;
-	exa->ModifyPixmapHeader = ARMSOCModifyPixmapHeader;
+	exa->ModifyPixmapHeader = LS_ModifyPixmapHeader;
 #endif
 
 #ifdef VIV2D_ACCESS
@@ -2456,7 +2456,7 @@ InitViv2DEXA(ScreenPtr pScreen, ScrnInfoPtr pScrn, int fd)
 #else
 	exa->PrepareAccess = ARMSOCPrepareAccess;
 	exa->FinishAccess = ARMSOCFinishAccess;
-	exa->PixmapIsOffscreen = ARMSOCPixmapIsOffscreen;
+	exa->PixmapIsOffscreen = IsPixmapOffscreen;
 #endif
 
 #ifdef VIV2D_COPY

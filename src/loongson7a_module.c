@@ -6,7 +6,7 @@
 #include <sys/fcntl.h>
 #include <unistd.h>
 
-#include "xf86.h"
+#include <xf86.h>
 #ifdef XSERVER_PLATFORM_BUS
 #include "xf86platformBus.h"
 #endif
@@ -44,41 +44,42 @@
 static SymTabRec Chipsets[] = {
     {0, "LS7A1000"},
     {1, "LS7A2000"},
+    {1, "LS2K"},
     {-1, NULL}
 };
 
 static void LS7A_Identify(int flags)
 {
-	xf86PrintChipsets(LOONGSON7A_DRIVER_NAME, "Device Dependent X Driver for",
-                      Chipsets);
+    xf86PrintChipsets(LOONGSON7A_DRIVER_NAME, "Device Dependent X Driver for",
+            Chipsets);
 }
 
 /** Supported options, as enum values. */
 enum {
-	OPTION_DEBUG,
-	OPTION_NO_FLIP,
-	OPTION_CARD_NUM,
-	OPTION_DEV_PATH,
-	OPTION_BUSID,
-	OPTION_DRIVERNAME,
-	OPTION_DRI_NUM_BUF,
-	OPTION_INIT_FROM_FBDEV,
-	OPTION_SOFT_EXA,
+    OPTION_DEBUG,
+    OPTION_NO_FLIP,
+    OPTION_CARD_NUM,
+    OPTION_DEV_PATH,
+    OPTION_BUSID,
+    OPTION_DRIVERNAME,
+    OPTION_DRI_NUM_BUF,
+    OPTION_INIT_FROM_FBDEV,
+    OPTION_SOFT_EXA,
 };
 
 
 /** Supported options. */
 static const OptionInfoRec Options[] = {
-	{ OPTION_DEBUG,      "Debug",      OPTV_BOOLEAN, {0}, FALSE },
-	{ OPTION_NO_FLIP,    "NoFlip",     OPTV_BOOLEAN, {0}, FALSE },
-	{ OPTION_CARD_NUM,   "DRICard",    OPTV_INTEGER, {0}, FALSE },
-	{ OPTION_DEV_PATH,   "kmsdev",     OPTV_STRING, {0}, FALSE },
-	{ OPTION_BUSID,      "BusID",      OPTV_STRING,  {0}, FALSE },
-	{ OPTION_DRIVERNAME, "DriverName", OPTV_STRING,  {0}, FALSE },
-	{ OPTION_DRI_NUM_BUF, "DRI2MaxBuffers", OPTV_INTEGER, { -1}, FALSE },
-	{ OPTION_INIT_FROM_FBDEV, "InitFromFBDev", OPTV_STRING, {0}, FALSE },
-	{ OPTION_SOFT_EXA,   "SoftEXA",   OPTV_BOOLEAN, {0}, FALSE },
-	{ -1,                NULL,         OPTV_NONE,    {0}, FALSE }
+    { OPTION_DEBUG,      "Debug",      OPTV_BOOLEAN, {0}, FALSE },
+    { OPTION_NO_FLIP,    "NoFlip",     OPTV_BOOLEAN, {0}, FALSE },
+    { OPTION_CARD_NUM,   "DRICard",    OPTV_INTEGER, {0}, FALSE },
+    { OPTION_DEV_PATH,   "kmsdev",     OPTV_STRING, {0}, FALSE },
+    { OPTION_BUSID,      "BusID",      OPTV_STRING,  {0}, FALSE },
+    { OPTION_DRIVERNAME, "DriverName", OPTV_STRING,  {0}, FALSE },
+    { OPTION_DRI_NUM_BUF, "DRI2MaxBuffers", OPTV_INTEGER, { -1}, FALSE },
+    { OPTION_INIT_FROM_FBDEV, "InitFromFBDev", OPTV_STRING, {0}, FALSE },
+    { OPTION_SOFT_EXA,   "SoftEXA",   OPTV_BOOLEAN, {0}, FALSE },
+    { -1,                NULL,         OPTV_NONE,    {0}, FALSE }
 };
 
 /**
@@ -88,48 +89,48 @@ static const OptionInfoRec Options[] = {
  */
 static const OptionInfoRec * LS7A_AvailableOptions(int chipid, int busid)
 {
-	return Options;
+    return Options;
 }
 
 
 //  Process the "xorg.conf" file options:
 void ProcessXorgConfOptions(ScrnInfoPtr pScrn, struct ARMSOCRec *pARMSOC)
 {
-        int driNumBufs;
-	xf86CollectOptions(pScrn, NULL);
-	pARMSOC->pOptionInfo = malloc(sizeof(Options));
+    int driNumBufs;
+    xf86CollectOptions(pScrn, NULL);
+    pARMSOC->pOptionInfo = malloc(sizeof(Options));
 
-	memcpy(pARMSOC->pOptionInfo, Options, sizeof(Options));
-	xf86ProcessOptions(pScrn->scrnIndex,
-	          pARMSOC->pEntityInfo->device->options, pARMSOC->pOptionInfo);
+    memcpy(pARMSOC->pOptionInfo, Options, sizeof(Options));
+    xf86ProcessOptions(pScrn->scrnIndex,
+            pARMSOC->pEntityInfo->device->options, pARMSOC->pOptionInfo);
 
-		/* Determine if the user wants debug messages turned on: */
-	armsocDebug = xf86ReturnOptValBool(pARMSOC->pOptionInfo, OPTION_DEBUG, FALSE);
+    /* Determine if the user wants debug messages turned on: */
+    armsocDebug = xf86ReturnOptValBool(pARMSOC->pOptionInfo, OPTION_DEBUG, FALSE);
 
-	if (!xf86GetOptValInteger(pARMSOC->pOptionInfo, OPTION_DRI_NUM_BUF,
-	                          &driNumBufs)) {
-		/* Default to double buffering */
-		driNumBufs = 2;
-	}
+    if (!xf86GetOptValInteger(pARMSOC->pOptionInfo, OPTION_DRI_NUM_BUF,
+                &driNumBufs)) {
+        /* Default to double buffering */
+        driNumBufs = 2;
+    }
 
-	if (driNumBufs < 2)
-	{
-	    ERROR_MSG( "Invalid option for %s: %d. Must be greater than or equal to 2",
-	    xf86TokenToOptName(pARMSOC->pOptionInfo,
-		                       OPTION_DRI_NUM_BUF), driNumBufs);
-		return ;
-	}
-	pARMSOC->driNumBufs = driNumBufs;
-	/* Determine if user wants to disable buffer flipping: */
-	pARMSOC->NoFlip = xf86ReturnOptValBool(pARMSOC->pOptionInfo,
-	                                       OPTION_NO_FLIP, FALSE);
-	xf86DrvMsg(pScrn->scrnIndex, X_INFO, 
-		"Buffer Flipping is %s\n", pARMSOC->NoFlip ? "Disabled" : "Enabled");
+    if (driNumBufs < 2)
+    {
+        ERROR_MSG( "Invalid option for %s: %d. Must be greater than or equal to 2",
+                xf86TokenToOptName(pARMSOC->pOptionInfo,
+                    OPTION_DRI_NUM_BUF), driNumBufs);
+        return ;
+    }
+    pARMSOC->driNumBufs = driNumBufs;
+    /* Determine if user wants to disable buffer flipping: */
+    pARMSOC->NoFlip = xf86ReturnOptValBool(pARMSOC->pOptionInfo,
+            OPTION_NO_FLIP, FALSE);
+    xf86DrvMsg(pScrn->scrnIndex, X_INFO,
+            "Buffer Flipping is %s\n", pARMSOC->NoFlip ? "Disabled" : "Enabled");
 
-	pARMSOC->SoftExa = xf86ReturnOptValBool(pARMSOC->pOptionInfo,
-	                                        OPTION_SOFT_EXA, FALSE);
-	xf86DrvMsg(pScrn->scrnIndex, X_INFO, 
-		"Hardware EXA is %s\n", pARMSOC->SoftExa ? "Disabled" : "Enabled");
+    pARMSOC->SoftExa = xf86ReturnOptValBool(pARMSOC->pOptionInfo,
+            OPTION_SOFT_EXA, FALSE);
+    xf86DrvMsg(pScrn->scrnIndex, X_INFO,
+            "Hardware EXA is %s\n", pARMSOC->SoftExa ? "Disabled" : "Enabled");
 }
 
 static Bool LS7A_DriverFunc(ScrnInfoPtr scrn, xorgDriverFuncOp op, void *data)
@@ -141,8 +142,10 @@ static Bool LS7A_DriverFunc(ScrnInfoPtr scrn, xorgDriverFuncOp op, void *data)
         flag = (CARD32 *) data;
         (*flag) = 0;
         return TRUE;
+#if XORG_VERSION_CURRENT >= XORG_VERSION_NUMERIC(1,15,99,902,0)
     case SUPPORTS_SERVER_FDS:
         return TRUE;
+#endif
     default:
         return FALSE;
     }
@@ -154,8 +157,8 @@ static int get_passed_fd(void)
 {
     if (xf86DRMMasterFd >= 0)
     {
-        xf86DrvMsg(-1, X_INFO,
-		"Using passed DRM master file descriptor %d\n", xf86DRMMasterFd);
+        xf86DrvMsg(-1, X_INFO, "Using passed DRM master file descriptor %d\n", 
+                xf86DRMMasterFd);
         return dup(xf86DRMMasterFd);
     }
     return -1;
@@ -277,8 +280,8 @@ static void ls_setup_entity(ScrnInfoPtr scrn, int entity_num)
 // immediately. This is usually best done with the xf86ConfigPciEntity() helper
 // function for PCI.
 
-static Bool LS7A_PciProbe(DriverPtr driver, 
-	int entity_num, struct pci_device *dev, intptr_t match_data)
+static Bool LS7A_PciProbe(DriverPtr driver,
+        int entity_num, struct pci_device *dev, intptr_t match_data)
 {
     ScrnInfoPtr scrn = NULL;
 
@@ -286,30 +289,30 @@ static Bool LS7A_PciProbe(DriverPtr driver,
 
     if (scrn)
     {
-	const char *devpath;
-	GDevPtr devSection = xf86GetDevFromEntity(scrn->entityList[0],
-		scrn->entityInstanceList[0]);
+        const char *devpath;
+        GDevPtr devSection = xf86GetDevFromEntity(scrn->entityList[0],
+                scrn->entityInstanceList[0]);
 
-	devpath = xf86FindOptionValue(devSection->options, "kmsdev");
+        devpath = xf86FindOptionValue(devSection->options, "kmsdev");
 
-	xf86DrvMsg(scrn->scrnIndex, X_INFO,
-		"using %s\n", devpath ? devpath : "default device");
+        xf86DrvMsg(scrn->scrnIndex, X_INFO,
+                "kmsdev using %s\n", devpath ? devpath : "default device");
 
-/*
-	if (probe_hw_pci(devpath, dev))
-	{
-	    // suijingfeng
-	    // LS7A_SetupScrnHooks(scrn);
+        /*
+           if (probe_hw_pci(devpath, dev))
+           {
+        // suijingfeng
+        // LS7A_SetupScrnHooks(scrn);
 
-	    xf86DrvMsg(scrn->scrnIndex, X_CONFIG,
-		    "claimed PCI slot %d@%d:%d:%d\n",
-		    dev->bus, dev->domain, dev->dev, dev->func);
+        xf86DrvMsg(scrn->scrnIndex, X_CONFIG,
+        "claimed PCI slot %d@%d:%d:%d\n",
+        dev->bus, dev->domain, dev->dev, dev->func);
 
-	    // ls_setup_entity(scrn, entity_num);
-	}
-	else
-	    scrn = NULL;
-*/
+        // ls_setup_entity(scrn, entity_num);
+        }
+        else
+        scrn = NULL;
+        */
     }
 
     return 0;
@@ -328,20 +331,77 @@ static const struct pci_id_match LOONGSON7A_DEVICE_MATCH[] =
 #endif
 
 
+
+#ifdef XSERVER_PLATFORM_BUS
+static Bool probe_hw(const char *dev, struct xf86_platform_device *platform_dev)
+{
+    int fd;
+
+#ifdef XF86_PDEV_SERVER_FD
+    if (platform_dev && (platform_dev->flags & XF86_PDEV_SERVER_FD)) {
+        fd = xf86_platform_device_odev_attributes(platform_dev)->fd;
+        if (fd == -1)
+            return FALSE;
+        return LS_CheckOutputs(fd, NULL);
+    }
+#endif
+
+    fd = LS_OpenHW(dev);
+    if (fd != -1) {
+        int ret = LS_CheckOutputs(fd, NULL);
+
+        close(fd);
+        return ret;
+    }
+    return FALSE;
+}
+
+static Bool LS7A_PlatformProbe(DriverPtr driver,
+                  int entity_num, int flags, struct xf86_platform_device *dev,
+                  intptr_t match_data)
+{
+    ScrnInfoPtr scrn = NULL;
+    const char *path = xf86_platform_device_odev_attributes(dev)->path;
+    int scr_flags = 0;
+
+    if (flags & PLATFORM_PROBE_GPU_SCREEN)
+        scr_flags = XF86_ALLOCATE_GPU_SCREEN;
+
+    if (probe_hw(path, dev))
+    {
+        scrn = xf86AllocateScreen(driver, scr_flags);
+        if (xf86IsEntitySharable(entity_num))
+            xf86SetEntityShared(entity_num);
+        xf86AddEntityToScreen(scrn, entity_num);
+
+        // ms_setup_scrn_hooks(scrn);
+
+        // LS7A_SetupScrnHooks(scrn);
+        xf86DrvMsg(scrn->scrnIndex, X_INFO, "platform probe, using drv %s\n", path ? path : "default device");
+
+        // ms_setup_entity(scrn, entity_num);
+    }
+
+    return scrn != NULL;
+}
+#endif
+
+
+
 /** Provide basic version information to the XFree86 code. */
 static XF86ModuleVersionInfo VersRec = {
-	LOONGSON7A_DRIVER_NAME,
-	MODULEVENDORSTRING,
-	MODINFOSTRING1,
-	MODINFOSTRING2,
-	XORG_VERSION_CURRENT,
-	PACKAGE_VERSION_MAJOR,
-	PACKAGE_VERSION_MINOR,
-	PACKAGE_VERSION_PATCHLEVEL,
-	ABI_CLASS_VIDEODRV,
-	ABI_VIDEODRV_VERSION,
-	MOD_CLASS_VIDEODRV,
-	{0, 0, 0, 0}
+        LOONGSON7A_DRIVER_NAME,
+        MODULEVENDORSTRING,
+        MODINFOSTRING1,
+        MODINFOSTRING2,
+        XORG_VERSION_CURRENT,
+        PACKAGE_VERSION_MAJOR,
+        PACKAGE_VERSION_MINOR,
+        PACKAGE_VERSION_PATCHLEVEL,
+        ABI_CLASS_VIDEODRV,
+        ABI_VIDEODRV_VERSION,
+        MOD_CLASS_VIDEODRV,
+        {0, 0, 0, 0}
 };
 
 
@@ -352,18 +412,20 @@ static MODULESETUPPROTO(Setup);
 
 
 _X_EXPORT DriverRec Loongson7a = {
-	LOONGSON7A_DRIVER_VERSION,
-	LOONGSON7A_DRIVER_NAME,
-	LS7A_Identify,
-	LS7A_Probe,
-	LS7A_AvailableOptions,
-	NULL,
-	0,
-	LS7A_DriverFunc,
+    .driverVersion = LOONGSON7A_DRIVER_VERSION,
+    .driverName = LOONGSON7A_DRIVER_NAME,
+    .Identify = LS7A_Identify,
+    .Probe = LS7A_Probe,
+    .AvailableOptions = LS7A_AvailableOptions,
+    .module = NULL,
+    .refCount = 0,
+    .driverFunc = LS7A_DriverFunc,
 #ifdef XSERVER_LIBPCIACCESS
-	LOONGSON7A_DEVICE_MATCH,
-	LS7A_PciProbe,
-	NULL
+    .supported_devices = LOONGSON7A_DEVICE_MATCH,
+    .PciProbe = LS7A_PciProbe,
+#endif
+#ifdef XSERVER_PLATFORM_BUS
+    .platformProbe = LS7A_PlatformProbe,
 #endif
 };
 
@@ -373,25 +435,24 @@ _X_EXPORT DriverRec Loongson7a = {
  */
 static void * Setup(pointer module, pointer opts, int *errmaj, int *errmin)
 {
-	static Bool setupDone = FALSE;
+    static Bool setupDone = FALSE;
 
-	/* This module should be loaded only once, but check to be sure: */
-	if (!setupDone)
-	{
-		setupDone = TRUE;
-		xf86AddDriver(&Loongson7a, module, 0);
+    /* This module should be loaded only once, but check to be sure: */
+    if (!setupDone)
+    {
+        setupDone = TRUE;
+        xf86AddDriver(&Loongson7a, module, 0);
 
-		/* The return value must be non-NULL on success even
-		 * though there is no TearDownProc.
-		 */
-		return (void *) 1;
-	}
-	else
-	{
-		if (errmaj)
-			*errmaj = LDR_ONCEONLY;
-		return NULL;
-	}
+        // The return value must be non-NULL on success
+        // even though there is no TearDownProc.
+        return (void *) 1;
+    }
+    else
+    {
+        if (errmaj)
+            *errmaj = LDR_ONCEONLY;
+        return NULL;
+    }
 }
 
 /** Let the XFree86 code know about the VersRec and Setup() function. */
