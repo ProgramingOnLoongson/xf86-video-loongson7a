@@ -4,7 +4,6 @@
 #define VIV2D_PITCH_ALIGN 32
 
 // EXA config
-#define VIV2D_MARKER 1
 #define VIV2D_PIXMAP 1
 #define VIV2D_ACCESS 1
 

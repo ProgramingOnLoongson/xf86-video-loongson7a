@@ -1,3 +1,6 @@
+#ifndef LOONGSON_HELPERS_H_
+#define LOONGSON_HELPERS_H_
+
 /*
  * Copyright © 2020 Loongson Corporation
  *
@@ -24,49 +27,14 @@
  *    Sui Jingfeng <suijingfeng@loongson.cn>
  */
 
-#ifndef VIV2D_EXA_H
-#define VIV2D_EXA_H
 
+Bool LS_IsMasterFd(int fd);
+void LS_ShowDriverInfo(int fd);
+Bool LS_CheckOutputs(int fd, int *count);
+int LS_OpenHW(const char *dev);
+int LS_OpenDRM(const char *devName);
 
-#include "loongson_exa.h"
+void drmmode_get_default_bpp(ScrnInfoPtr pScrn, int fd, int *depth, int *bpp);
 
-typedef struct {
-	struct ARMSOCEXARec base;
-	ExaDriverPtr exa;
-	/* add any other driver private data here.. */
-	Viv2DPtr v2d;
-} Viv2DEXARec, *Viv2DEXAPtr;
-
-static inline Viv2DRec*
-Viv2DPrivFromPixmap(PixmapPtr pPixmap)
-{
-	ScreenPtr pScreen = pPixmap->drawable.pScreen;
-	ScrnInfoPtr pScrn = xf86ScreenToScrn(pScreen);
-	loongsonRecPtr pARMSOC = loongsonPTR(pScrn);
-	Viv2DEXAPtr exa = (Viv2DEXAPtr)(pARMSOC->pARMSOCEXA);
-	Viv2DRec *v2d = exa->v2d;
-	return v2d;
-}
-
-static inline Viv2DRec* Viv2DPrivFromARMSOC(struct ARMSOCRec *pARMSOC)
-{
-	Viv2DEXAPtr exa = (Viv2DEXAPtr)(pARMSOC->pARMSOCEXA);
-	Viv2DRec *v2d = exa->v2d;
-	return v2d;
-}
-
-static inline Viv2DRec*
-Viv2DPrivFromScreen(ScreenPtr pScreen)
-{
-	Viv2DRec *v2d;
-	Viv2DEXAPtr exa;
-	struct ARMSOCRec *pARMSOC = ARMSOCPTR_FROM_SCREEN(pScreen);
-	exa = (Viv2DEXAPtr)(pARMSOC->pARMSOCEXA);
-	v2d = exa->v2d;
-	return v2d;
-}
-
-
-struct ARMSOCEXARec *InitViv2DEXA(ScreenPtr pScreen, ScrnInfoPtr pScrn, int fd);
 
 #endif

@@ -21,52 +21,39 @@
  * SOFTWARE.
  *
  * Authors:
- *    Sui Jingfeng <suijingfeng@loongson.cn>
+ *    Sui Jingfeng <suijingfeng@loongson.com>
  */
 
-#ifndef VIV2D_EXA_H
-#define VIV2D_EXA_H
+
+#ifndef LOONGSON_ENTITY_H_
+#define LOONGSON_ENTITY_H_
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <xf86str.h>
+
+//// Entity
+void LS_SetupEntity(ScrnInfoPtr scrn, int entity_num);
+// bith return the renerence count
+int LS_EntityIncreaseFdReference(ScrnInfoPtr pScrn);
+int LS_EntityDecreaseFdReference(ScrnInfoPtr pScrn);
+// cached fd
+int LS_EntityGetCachedFd(ScrnInfoPtr scrn);
+void LS_EntityInitFd(ScrnInfoPtr pScrn, int fd);
+
+////
+void LS_MarkCrtcInUse(ScrnInfoPtr pScrn, int num);
+unsigned int LS_GetAssignedCrtc(ScrnInfoPtr pScrn);
+void LS_EntityClearAssignedCrtc(ScrnInfoPtr pScrn);
 
 
-#include "loongson_exa.h"
+//// wakeup and server generation related stuff
+unsigned long LS_EntityGetFd_wakeup(ScrnInfoPtr scrn);
+void LS_EntityInitFd_wakeup(ScrnInfoPtr scrn, unsigned long serverGen);
 
-typedef struct {
-	struct ARMSOCEXARec base;
-	ExaDriverPtr exa;
-	/* add any other driver private data here.. */
-	Viv2DPtr v2d;
-} Viv2DEXARec, *Viv2DEXAPtr;
-
-static inline Viv2DRec*
-Viv2DPrivFromPixmap(PixmapPtr pPixmap)
-{
-	ScreenPtr pScreen = pPixmap->drawable.pScreen;
-	ScrnInfoPtr pScrn = xf86ScreenToScrn(pScreen);
-	loongsonRecPtr pARMSOC = loongsonPTR(pScrn);
-	Viv2DEXAPtr exa = (Viv2DEXAPtr)(pARMSOC->pARMSOCEXA);
-	Viv2DRec *v2d = exa->v2d;
-	return v2d;
-}
-
-static inline Viv2DRec* Viv2DPrivFromARMSOC(struct ARMSOCRec *pARMSOC)
-{
-	Viv2DEXAPtr exa = (Viv2DEXAPtr)(pARMSOC->pARMSOCEXA);
-	Viv2DRec *v2d = exa->v2d;
-	return v2d;
-}
-
-static inline Viv2DRec*
-Viv2DPrivFromScreen(ScreenPtr pScreen)
-{
-	Viv2DRec *v2d;
-	Viv2DEXAPtr exa;
-	struct ARMSOCRec *pARMSOC = ARMSOCPTR_FROM_SCREEN(pScreen);
-	exa = (Viv2DEXAPtr)(pARMSOC->pARMSOCEXA);
-	v2d = exa->v2d;
-	return v2d;
-}
-
-
-struct ARMSOCEXARec *InitViv2DEXA(ScreenPtr pScreen, ScrnInfoPtr pScrn, int fd);
+int LS_EntityIncRef_weakeup(ScrnInfoPtr scrn);
+int LS_EntityDecRef_weakeup(ScrnInfoPtr scrn);
 
 #endif

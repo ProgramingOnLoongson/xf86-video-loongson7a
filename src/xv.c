@@ -1,7 +1,6 @@
-/* -*- mode: C; c-file-style: "k&r"; tab-width 4; indent-tabs-mode: t; -*- */
-
 /*
  * Copyright © 2012 Texas Instruments, Inc
+ * Copyright © 2020 Loongson Corporation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -24,26 +23,31 @@
  *
  * Authors:
  *    Rob Clark <rob@ti.com>
+ *    Sui Jingfeng <suijingfeng@loongson.cn>
  */
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
 
-#include "xf86xv.h"
+#include <xf86xv.h>
 #include <X11/extensions/Xv.h>
-#include "fourcc.h"
-#include "drm_fourcc.h"
+#include <fourcc.h>
+#include <drm_fourcc.h>
 
-#include "armsoc_driver.h"
-#include "armsoc_exa.h"
 
-#define NUM_TEXTURE_PORTS 32		/* this is basically arbitrary */
+#include "loongson_driver.h"
+#include "loongson_exa.h"
+#include "loongson_debug.h"
 
+/* this is basically arbitrary */
+#define NUM_TEXTURE_PORTS 32
 #define IMAGE_MAX_W 2048
 #define IMAGE_MAX_H 2048
 
+#ifndef ALIGN
 #define ALIGN(val, align)	(((val) + (align) - 1) & ~((align) - 1))
+#endif
 
 typedef struct {
 	unsigned int format;
@@ -84,6 +88,18 @@ typedef int (*ARMSOCPutTextureImageProc)(
     PixmapPtr pDstPix, BoxPtr pDstBox,
     BoxPtr fullDstBox,
     void *closure);
+
+
+static inline PixmapPtr draw2pix(DrawablePtr pDraw)
+{
+	if (NULL == pDraw)
+		return NULL;
+	else if (pDraw->type == DRAWABLE_WINDOW)
+		return pDraw->pScreen->GetWindowPixmap((WindowPtr)pDraw);
+	else
+		return (PixmapPtr)pDraw;
+}
+
 /**
  * Helper function to implement video blit, handling clipping, damage, etc..
  *
@@ -190,23 +206,31 @@ setupplane(ScreenPtr pScreen, PixmapPtr pSrcPix, int width, int height,
 {
 	ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum];
 	struct ARMSOCRec * pARMSOC = ARMSOCPTR(pScrn);
-	struct armsoc_bo *bo;
-	unsigned char *src, *buf = *bufp;
+	unsigned char *src;
+    unsigned char *buf = *bufp;
 	int i;
 
 	if (pSrcPix && ((pSrcPix->drawable.height != height) ||
-	                (pSrcPix->drawable.width != width))) {
+	                (pSrcPix->drawable.width != width)))
+    {
 		pScreen->DestroyPixmap(pSrcPix);
 		pSrcPix = NULL;
 	}
 
-	if (!pSrcPix) {
-		pSrcPix = pScreen->CreatePixmap(pScreen, width, height, depth, CREATE_PIXMAP_USAGE_BACKING_PIXMAP);
+	if (!pSrcPix)
+    {
+		pSrcPix = pScreen->CreatePixmap(pScreen,
+            width, height, depth, CREATE_PIXMAP_USAGE_BACKING_PIXMAP);
 	}
 
-	bo = ARMSOCPixmapBo(pSrcPix);
-	armsoc_bo_cpu_prep(bo, ARMSOC_GEM_WRITE);
-	src = armsoc_bo_map(bo);
+
+	struct ARMSOCPixmapPrivRec *priv = exaGetPixmapDriverPrivate(pSrcPix);
+	struct dumb_bo * bo = priv->bo;
+
+	armsoc_bo_cpu_prep(bo);
+
+    dumb_bo_map(bo->fd, bo);
+    src = bo->ptr;
 
 	/* copy from buf to src pixmap: */
 	for (i = 0; i < height; i++) {
@@ -215,7 +239,7 @@ setupplane(ScreenPtr pScreen, PixmapPtr pSrcPix, int width, int height,
 		buf += bufpitch;
 	}
 
-	armsoc_bo_cpu_fini(bo, ARMSOC_GEM_WRITE);
+	armsoc_bo_cpu_fini(bo);
 
 	*bufp = buf;
 
@@ -224,6 +248,7 @@ setupplane(ScreenPtr pScreen, PixmapPtr pSrcPix, int width, int height,
 
 	return pSrcPix;
 }
+
 
 static void
 freebufs(ScreenPtr pScreen, ARMSOCPortPrivPtr pPriv)
@@ -567,9 +592,9 @@ ARMSOCVideoSetupTexturedVideo(ScreenPtr pScreen)
 	adapt->GetVideo			= NULL;
 	adapt->GetStill			= NULL;
 	adapt->StopVideo		= ARMSOCVideoStopVideo;
-	adapt->SetPortAttribute		= ARMSOCVideoSetPortAttribute;
-	adapt->GetPortAttribute		= ARMSOCVideoGetPortAttribute;
-	adapt->QueryBestSize		= ARMSOCVideoQueryBestSize;
+	adapt->SetPortAttribute	= ARMSOCVideoSetPortAttribute;
+	adapt->GetPortAttribute	= ARMSOCVideoGetPortAttribute;
+	adapt->QueryBestSize	= ARMSOCVideoQueryBestSize;
 	adapt->PutImage			= ARMSOCVideoPutImage;
 	adapt->QueryImageAttributes	= ARMSOCVideoQueryImageAttributes;
 

@@ -1,4 +1,4 @@
-#  Copyright © 2011 Texas Instruments Incorporated
+#  Copyright © 2020 Loongson Corporation
 #
 #  Permission is hereby granted, free of charge, to any person obtaining a
 #  copy of this software and associated documentation files (the "Software"),
@@ -17,7 +17,6 @@
 #  ADAM JACKSON BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 #  IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 #  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-#
 # Authors:
 #    Ian Elliott <ianelliottus@yahoo.com>
 #    Rob Clark <rob@ti.com>
@@ -34,13 +33,6 @@ LOONGSON_CFLAGS = -O2 -march=mips64r2 -mtune=loongson3a -mel -mabi=64
 
 AM_ASFLAGS = $(LOONGSON_CFLAGS)
 
-# TODO: probably should have configure script check for what is supported..
-ERROR_CFLAGS = -Wall -Wdeclaration-after-statement -Wvla \
-	-Wpointer-arith -Wmissing-declarations -Wmissing-prototypes \
-	-Wwrite-strings -Wformat-nonliteral  -Wformat-security \
-	-Wold-style-definition -Winit-self -Wmissing-include-dirs \
-	-Waddress -Waggregate-return -Wno-multichar -Wnested-externs
- 
 AM_CFLAGS = @XORG_CFLAGS@ $(LOONGSON_CFLAGS)
 loongson7a_drv_la_LTLIBRARIES = loongson7a_drv.la
 loongson7a_drv_la_LDFLAGS = -module -avoid-version -no-undefined
@@ -48,16 +40,24 @@ loongson7a_drv_la_LIBADD = @XORG_LIBS@
 loongson7a_drv_ladir = @moduledir@/drivers
 
 loongson7a_drv_la_SOURCES = \
+	driver.c \
+	dumb_bo.c \
 	drmmode_display.c \
-	armsoc_exa.c \
-	armsoc_exa_null.c \
-	armsoc_dri2.c \
-	armsoc_driver.c \
-	armsoc_dumb.c \
-	armsoc_dri3.c \
-	armsoc_present.c \
-	armsoc_xv.c \
-	loongson7a_module.c \
+	drmmode_cursor.c \
+	fake_exa.c \
+	loongson_dri2.c \
+	loongson_dri3.c \
+	loongson_present.c \
+	vblank.c \
+	pageflip.c \
+	xv.c \
 	viv2d/queue.c \
 	viv2d/etnaviv_extra.c \
-	viv2d/viv2d_exa.c
+	viv2d/viv2d_exa.c \
+	loongson_module.c \
+	loongson_probe.c \
+	loongson_options.c \
+	loongson_entity.c \
+	loongson_helpers.c \
+	loongson_debug.c \
+	loongson_pixmap.c

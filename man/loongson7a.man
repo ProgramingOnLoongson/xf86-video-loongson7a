@@ -2,7 +2,7 @@
 .ds q \N'34'
 .TH armsoc  __drivermansuffix__ __vendorversion__
 .SH NAME
-armsoc \- Arm SoC graphics
+loongson7a \- loongson 7a series graphics
 .SH SYNOPSIS
 .nf
 .B "Section \*qDevice\*q"
@@ -51,19 +51,6 @@ Default: NULL
 Select which dri card to use.
 .IP
 Default: 0
-.TP
-.BI "Option \*qInitFromFBDev\*q \*q" string \*q
-Specifies an fbdev device node (such as "/dev/fb0") to use to initialize the
-DRM scanout buffer. Specifying this option only makes sense (and is required)
-when X is started with the parameter "-background none".
-
-The InitFromFBDev functionality is limited to when the fbdev device pixel
-format matches the format of the X screen. This includes bits-per-pixel and RGB
-ordering and size. If the driver is unable to copy from the fbdev device then
-an error will be logged, and the -background none functionality will be
-disabled.
-.IP
-Default: NULL
 .TP
 .BI "Option \*qUMP_LOCK\*q \*q" boolean \*q
 Use the umplock module for cross-process access synchronization. It should be only enabled for Mali400
@@ -153,7 +140,7 @@ builtin laptop screen, both running at 1024x768.
 .BI "  Option \*qmonitor-LVDS\*q \*qLaptop FooBar Internal Display\*q"
 .BI "  Option \*qmonitor-VGA\*q \*qSome Random CRT\*q"
 .B "EndSection"
-        
+
 .SH "SEE ALSO"
 __xservername__(__appmansuffix__), __xconfigfile__(__filemansuffix__), Xserver(__appmansuffix__), X(__miscmansuffix__)
 .SH AUTHORS

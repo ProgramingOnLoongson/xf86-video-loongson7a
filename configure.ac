@@ -38,8 +38,8 @@ AM_MAINTAINER_MODE
 
 # Require xorg-macros: XORG_DEFAULT_OPTIONS
 m4_ifndef([XORG_MACROS_VERSION],
-          [m4_fatal([must install xorg-macros 1.4 or later before running autoconf/autogen])])
-XORG_MACROS_VERSION(1.4)
+          [m4_fatal([must install xorg-macros 1.8 or later before running autoconf/autogen])])
+XORG_MACROS_VERSION(1.8)
 XORG_DEFAULT_OPTIONS
 
 # Initialize libtool
@@ -68,11 +68,17 @@ XORG_DRIVER_CHECK_EXT(XV, videoproto)
 XORG_DRIVER_CHECK_EXT(DPMSExtension, xextproto)
 
 # Checks for pkg-config packages
+PKG_CHECK_MODULES(DRM, [libdrm >= 2.4.46])
+
+PKG_CHECK_MODULES(UDEV, [libudev], [udev=yes], [udev=no])
+if test x"$udev" = xyes; then
+        AC_DEFINE(HAVE_UDEV,1,[Enable udev-based monitor hotplug detection])
+fi
+
 PKG_CHECK_MODULES(XORG,
-                  [xorg-server >= 1.10]
+                  [xorg-server >= 1.16]
                   xproto
                   fontsproto
-                  libdrm
                   libdrm_etnaviv
                   dri2proto
                   pixman-1
@@ -83,6 +89,22 @@ PKG_CHECK_MODULES(XEXT, [xextproto >= 7.0.99.1],
 	HAVE_XEXTPROTO_71="no")
 AM_CONDITIONAL(HAVE_XEXTPROTO_71, [ test "$HAVE_XEXTPROTO_71" = "yes"])
 
+
+# Section "OutputClass" is only supported as of xserver 1.16
+PKG_CHECK_EXISTS([xorg-server >= 1.16],
+		 [sysconfigdir=`$PKG_CONFIG --variable=sysconfigdir xorg-server`],
+		 [sysconfigdir=""])
+AM_CONDITIONAL(HAS_XORG_CONF_DIR, [test "x$sysconfigdir" != "x"])
+
+# Define a configure option for an alternate X Server configuration directory
+AC_ARG_WITH(xorg-conf-dir,
+            AS_HELP_STRING([--with-xorg-conf-dir=DIR],
+                           [Default xorg.conf.d directory [[default=${prefix}/share/X11/xorg.conf.d]]]),
+            [configdir="$withval"],
+            [configdir='${prefix}/share/X11/xorg.conf.d'])
+AC_SUBST(configdir)
+
+
 # Checks for header files.
 AC_HEADER_STDC
 
@@ -92,8 +114,28 @@ DRIVER_NAME=loongson7a
 AC_SUBST([DRIVER_NAME])
 AC_SUBST([moduledir])
 
-AC_OUTPUT([
-	Makefile
-	src/Makefile
-	man/Makefile
+AC_CONFIG_FILES([
+                Makefile
+                src/Makefile
+                man/Makefile
+                conf/Makefile
 ])
+AC_OUTPUT
+
+dnl
+dnl Output some configuration info for the user
+dnl
+echo ""
+echo "        prefix:              $prefix"
+echo "        exec_prefix:         $exec_prefix"
+echo "        libdir:              $libdir"
+echo "        includedir:          $includedir"
+echo "        configdir:           $configdir"
+
+echo ""
+echo "        CFLAGS:              $CFLAGS"
+echo "        Macros:              $DEFINES"
+
+echo ""
+echo "        Run '${MAKE-make}' to build xf86-video-loongson"
+echo ""
